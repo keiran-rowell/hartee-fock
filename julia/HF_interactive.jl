@@ -29,9 +29,16 @@ end
 md"""
 # Interactive Hartree-Fock for H₂
 
-A pedagogical implementation of restricted Hartree-Fock for the hydrogen molecule.
+A teaching focussed implementation of restricted Hartree-Fock for the hydrogen molecule.
 
-**Adjust the parameters below to see how molecular geometry and basis set choice affect the SCF convergence!**
+**Companion to**: [Hartree-Fock in Rust, Julia, and Python](blog-link)
+
+This notebook lets you explore the concepts from the tutorial. If you haven't 
+read the post yet, start there for the theory and implementation details.
+
+
+
+**Quick Start**: Adjust the parameters below to see how molecular geometry and basis set choice affect the SCF convergence!
 """
 
 # ╔═╡ parameters_cell
@@ -40,7 +47,7 @@ md"""
 
 **Bond Length (Å):** $(@bind bond_length_angstrom Slider(0.5:0.01:2.5, default=0.74, show_value=true))
 
-**Basis Set:** $(@bind basis_set_name Select(["STO-3G", "cc-pVDZ", "cc-pVTZ"], default="STO-3G"))
+**Basis Set:** $(@bind basis_set_name Select(["STO-2G", "STO-3G", "3-21G", "6-31G",  "cc-pVDZ", "cc-pVTZ", "cc-pVQZ", "def2-SVP", "def2-TZVP"], default="STO-3G"))
 """
 
 # ╔═╡ include_core
