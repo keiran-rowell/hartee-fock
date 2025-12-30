@@ -160,7 +160,7 @@ for iteration in range(max_iter):
         logger.error("Number of electrons is odd, cannot proceed with restricted HF.")
     num_occ = num_electrons // 2
     
-    D_new = 2 * C[:, :int(num_occ)] @ C[:, :int(num_occ)].T
+    D_new = 2 * C[:, :num_occ] @ C[:, :num_occ].T
     logger.debug(f'D_new density matrix:\n {D_new}')
 
     E_elec = 0.5 * np.trace(D_new @ (T + V_nuc + F))

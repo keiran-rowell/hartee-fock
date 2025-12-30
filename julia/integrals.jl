@@ -1,4 +1,4 @@
-# Generated from integrals.py with Claude Sonnet 4.5
+# Generated from integrals.py with Claude Sonnet 4.5 then fixed
 
 using LinearAlgebra
 using SpecialFunctions

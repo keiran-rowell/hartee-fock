@@ -1,4 +1,4 @@
-# Generated from HF.py using Claude Sonnet 4.5
+# Generated from HF.py using Claude Sonnet 4.5 then fixed
 using LinearAlgebra
 using BasisSets
 using Printf
@@ -16,7 +16,7 @@ function main()
 
     # Molecule and basis set setup
     mol_path = "../H2.xyz"
-    basis_set_name = "cc-pVTZ"
+    basis_set_name = "STO-3G"
 
     # Create logger that will print to terminal, a log file, and full debug trace 
     logger, info_io, debug_io = get_scf_loggers(mol_path, basis_set_name)
@@ -116,13 +116,13 @@ function main()
                 X = s_eigvecs * Diagonal(clean_eigvals .^ (-0.5)) * s_eigvecs'
 
                 # Transform Fock matrix into new basis
-                F_prime = X' * F * X
+                F′ = X' * F * X
 
                 # Update coefficient matrix
-                ϵ, C_prime = eigen(Symmetric(F_prime))
+                ϵ, C′ = eigen(Symmetric(F′))
                 @debug "Orbital energies: $ϵ"
 
-                C = X * C_prime
+                C = X * C′
 
                 # Update density matrix
                 num_electrons = length(atoms)  # Each H contributes 1 electron

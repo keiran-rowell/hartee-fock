@@ -1,0 +1,4 @@
+./julia/*_session.jl
+*backup*
+*.log
+*.debug
