@@ -1,0 +1,1 @@
+What I should do is have an integrals.py and import the primitive integrals and ERIs from there
