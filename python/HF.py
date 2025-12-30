@@ -39,7 +39,7 @@ def read_xyz(file_path):
         atoms.append(atom)
     return atoms
 
-molecule_filename='../h2.xyz'
+molecule_filename='../H2.xyz'
 ## Read xyz file to set atomic positions
 atoms = read_xyz(molecule_filename)
 R_A = atoms[0]['coords']
