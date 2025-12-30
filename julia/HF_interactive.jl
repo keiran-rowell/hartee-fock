@@ -41,8 +41,6 @@ md"""
 **Bond Length (Å):** $(@bind bond_length_angstrom Slider(0.5:0.01:2.5, default=0.74, show_value=true))
 
 **Basis Set:** $(@bind basis_set_name Select(["STO-3G", "cc-pVDZ", "cc-pVTZ"], default="STO-3G"))
-
-**Show Debug Info:** $(@bind show_debug CheckBox(default=false))
 """
 
 # ╔═╡ include_core
@@ -77,15 +75,22 @@ end
 md"""
 ## Results
 
-**Bond Length:** $(round(bond_length_angstrom, digits=3)) Å ($(round(results.bond_length, digits=3)) Bohr)
+**Bond Length:** 
+$(round(bond_length_angstrom, digits=3)) Å 
+— $(round(results.bond_length, digits=3)) Bohr
 
-**Basis Set:** $(results.basis_set) ($(results.n_basis) basis functions)
+**Basis Set:** 
+$(results.basis_set) 
+— $(results.n_basis) basis functions
 
-**Convergence:** $(results.converged ? "✅ Converged" : "❌ Not converged") in $(results.iterations) iterations
+**Convergence:** 
+$(results.converged ? "✅ Converged" : "❌ Not converged") in $(results.iterations) iterations
 
-**Final Energy:** $(round(results.final_energy, digits=6)) Ha
+**Final Energy:** 
+$(round(results.final_energy, digits=6)) Ha
 
-**Nuclear Repulsion:** $(round(results.E_nuc_repulsion, digits=6)) Ha
+**Nuclear Repulsion:** 
+$(round(results.E_nuc_repulsion, digits=6)) Ha
 """
 
 # ╔═╡ overlap_matrix_plot
@@ -156,8 +161,8 @@ begin
     min_e = scan_energies[min_idx]
     
     # Experimental H2 values for reference
-    exp_bond_length = 0.74144  # Å
-    exp_dissociation = -1.1744  # Ha (exact ground state)
+    exp_bond_length = 0.74  # Å
+    exp_dissociation = -1.17447  # Ha (exact ground state)
     
     nothing
 end
@@ -287,40 +292,38 @@ let
     Markdown.parse(table_header * table_body * footer_text)
 end
 
+# ╔═╡ debug_toggle_cell
+md"""
+---
+## Advanced Options
+
+**Show Debug Info:** $(@bind show_debug CheckBox(default=false))
+
+*Enable to see all intermediate matrices and detailed SCF iteration data*
+"""
+
 # ╔═╡ debug_info_cell
 if show_debug
     md"""
     ## Debug Information
     
     ### Overlap Matrix S:
-    ```
     $(results.S_matrix)
-    ```
     
     ### Kinetic Energy Matrix T:
-    ```
     $(results.T_matrix)
-    ```
     
     ### Nuclear Attraction Matrix V_nuc:
-    ```
     $(results.V_nuc_matrix)
-    ```
     
     ### Core Hamiltonian H_core = T + V_nuc:
-    ```
     $(results.H_core)
-    ```
     
     ### Final Fock Matrix F:
-    ```
     $(results.F_matrix)
-    ```
     
     ### Orbital Coefficients C:
-    ```
     $(results.coefficients)
-    ```
     
     ### Energy at each iteration:
     $(join([@sprintf("Iter %d: %.6f Ha", i, e) for (i, e) in enumerate(results.energy_history)], "\n\n"))
@@ -341,8 +344,8 @@ This interactive notebook demonstrates restricted Hartree-Fock for H₂. Try adj
 
 The overlap matrix shows how basis functions overlap in space. Diagonal elements are always 1 (perfect self-overlap), while off-diagonal elements decrease as atoms move apart.
 
-**Implementation:** Julia with BasisSets.jl
-**Author:** Keiran Rowell with Claude Sonnet 4.5 prompting of written code
+**Implementation:** Julia with BasisSets.jl 
+**Author:** Keiran Rowell with prompting of Claude Sonnet 4.5 on written Julia code
 
 **Source Code:** 
 - `HF_modular.jl` - Main SCF algorithm
@@ -356,8 +359,8 @@ The overlap matrix shows how basis functions overlap in space. Diagonal elements
 
 # ╔═╡ Cell order:
 # ╟─title_cell
+# ╟─package_cell
 # ╟─parameters_cell
-# ╠═package_cell
 # ╟─include_core
 # ╠═computation_cell
 # ╟─results_cell
@@ -369,5 +372,6 @@ The overlap matrix shows how basis functions overlap in space. Diagonal elements
 # ╟─orbital_energies_cell
 # ╟─comparison_cell
 # ╟─basis_comparison
+# ╟─debug_toggle_cell
 # ╟─debug_info_cell
 # ╟─footer_cell

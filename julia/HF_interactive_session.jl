@@ -1,10 +1,22 @@
 ### A Pluto.jl notebook ###
-# v0.19.40
+# v0.20.21
 
 using Markdown
 using InteractiveUtils
 
-# ╔═╡ package_cell
+# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
+macro bind(def, element)
+    #! format: off
+    return quote
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local el = $(esc(element))
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
+        el
+    end
+    #! format: on
+end
+
+# ╔═╡ 11887cfe-e554-11f0-8d4b-91fdf4f00424
 begin
     using Pkg
     Pkg.activate(mktempdir())
@@ -25,27 +37,7 @@ begin
     using Printf
 end
 
-# ╔═╡ title_cell
-md"""
-# Interactive Hartree-Fock for H₂
-
-A pedagogical implementation of restricted Hartree-Fock for the hydrogen molecule.
-
-**Adjust the parameters below to see how molecular geometry and basis set choice affect the SCF convergence!**
-"""
-
-# ╔═╡ parameters_cell
-md"""
-## Interactive Parameters
-
-**Bond Length (Å):** $(@bind bond_length_angstrom Slider(0.5:0.01:2.5, default=0.74, show_value=true))
-
-**Basis Set:** $(@bind basis_set_name Select(["STO-3G", "cc-pVDZ", "cc-pVTZ"], default="STO-3G"))
-
-**Show Debug Info:** $(@bind show_debug CheckBox(default=false))
-"""
-
-# ╔═╡ include_core
+# ╔═╡ 11888046-e554-11f0-b19b-03f592d5fbbc
 begin
     # Include the core HF implementation
     # This includes both integrals.jl and the main HF logic
@@ -58,7 +50,25 @@ begin
     """
 end
 
-# ╔═╡ computation_cell
+# ╔═╡ 11887f10-e554-11f0-b61c-6deb71c75560
+md"""
+# Interactive Hartree-Fock for H₂
+
+A pedagogical implementation of restricted Hartree-Fock for the hydrogen molecule.
+
+**Adjust the parameters below to see how molecular geometry and basis set choice affect the SCF convergence!**
+"""
+
+# ╔═╡ 11887fae-e554-11f0-82c5-3b9f30359809
+md"""
+## Interactive Parameters
+
+**Bond Length (Å):** $(@bind bond_length_angstrom Slider(0.5:0.01:2.5, default=0.74, show_value=true))
+
+**Basis Set:** $(@bind basis_set_name Select(["STO-3G", "cc-pVDZ", "cc-pVTZ"], default="STO-3G"))
+"""
+
+# ╔═╡ 118880f0-e554-11f0-a3b2-397a4cb1e92b
 begin
     # Convert Angstroms to Bohr
     bond_length_bohr = bond_length_angstrom * 1.88973
@@ -73,22 +83,29 @@ begin
     results = run_hf_from_coords(h2_coords, basis_set_name, verbose=false)
 end
 
-# ╔═╡ results_cell
+# ╔═╡ 118881ba-e554-11f0-b539-4fe915e86069
 md"""
 ## Results
 
-**Bond Length:** $(round(bond_length_angstrom, digits=3)) Å ($(round(results.bond_length, digits=3)) Bohr)
+**Bond Length:** 
+$(round(bond_length_angstrom, digits=3)) Å 
+— $(round(results.bond_length, digits=3)) Bohr
 
-**Basis Set:** $(results.basis_set) ($(results.n_basis) basis functions)
+**Basis Set:** 
+$(results.basis_set) 
+— $(results.n_basis) basis functions
 
-**Convergence:** $(results.converged ? "✅ Converged" : "❌ Not converged") in $(results.iterations) iterations
+**Convergence:** 
+$(results.converged ? "✅ Converged" : "❌ Not converged") in $(results.iterations) iterations
 
-**Final Energy:** $(round(results.final_energy, digits=6)) Ha
+**Final Energy:** 
+$(round(results.final_energy, digits=6)) Ha
 
-**Nuclear Repulsion:** $(round(results.E_nuc_repulsion, digits=6)) Ha
+**Nuclear Repulsion:** 
+$(round(results.E_nuc_repulsion, digits=6)) Ha
 """
 
-# ╔═╡ overlap_matrix_plot
+# ╔═╡ 118882a8-e554-11f0-bfb9-ef3e96197a4e
 let
     S = results.S_matrix
     n = size(S, 1)
@@ -112,7 +129,7 @@ let
     p
 end
 
-# ╔═╡ convergence_plot
+# ╔═╡ 11888398-e554-11f0-b86b-658e50a7d273
 let
     plot(1:length(results.energy_history), results.energy_history,
         xlabel="SCF Iteration",
@@ -126,7 +143,7 @@ let
         xticks=1:length(results.energy_history))
 end
 
-# ╔═╡ energy_curve_cell
+# ╔═╡ 1188844c-e554-11f0-81e5-079d1222e769
 md"""
 ## Potential Energy Surface
 
@@ -137,7 +154,7 @@ Let's scan the energy as a function of bond length:
 **Show reference (experimental):** $(@bind show_reference CheckBox(default=true))
 """
 
-# ╔═╡ energy_scan
+# ╔═╡ 118884e2-e554-11f0-951d-333c758eec27
 begin
     # Scan bond lengths
     scan_distances = range(0.5, 2.5, length=n_scan_points)
@@ -156,13 +173,13 @@ begin
     min_e = scan_energies[min_idx]
     
     # Experimental H2 values for reference
-    exp_bond_length = 0.74144  # Å
-    exp_dissociation = -1.1744  # Ha (exact ground state)
+    exp_bond_length = 0.74  # Å
+    exp_dissociation = -1.17447  # Ha (exact ground state)
     
     nothing
 end
 
-# ╔═╡ energy_curve_plot
+# ╔═╡ 1188862c-e554-11f0-812e-a98fc52b6429
 let
     p = plot(scan_distances, scan_energies,
         xlabel="Bond Length (Å)",
@@ -203,7 +220,7 @@ let
     p
 end
 
-# ╔═╡ orbital_energies_cell
+# ╔═╡ 11888834-e554-11f0-bd67-9736ec200ca1
 if results.orbital_energies !== nothing
     let
         # Plot orbital energy level diagram
@@ -232,14 +249,14 @@ else
     md"*Orbital energies not available*"
 end
 
-# ╔═╡ comparison_cell
+# ╔═╡ 11888a0a-e554-11f0-a085-75a20887cc50
 md"""
 ## Basis Set Comparison
 
 Compare results across different basis sets at the current geometry:
 """
 
-# ╔═╡ basis_comparison
+# ╔═╡ 11888a5c-e554-11f0-ab90-6df4a78a6603
 let
     basis_sets = ["STO-3G", "cc-pVDZ", "cc-pVTZ"]
     comparison_results = []
@@ -287,40 +304,38 @@ let
     Markdown.parse(table_header * table_body * footer_text)
 end
 
-# ╔═╡ debug_info_cell
+# ╔═╡ 11888db6-e554-11f0-a0c7-91704c3e027c
+md"""
+---
+## Advanced Options
+
+**Show Debug Info:** $(@bind show_debug CheckBox(default=false))
+
+*Enable to see all intermediate matrices and detailed SCF iteration data*
+"""
+
+# ╔═╡ 11888e30-e554-11f0-ac5d-07da46ccf627
 if show_debug
     md"""
     ## Debug Information
     
     ### Overlap Matrix S:
-    ```
     $(results.S_matrix)
-    ```
     
     ### Kinetic Energy Matrix T:
-    ```
     $(results.T_matrix)
-    ```
     
     ### Nuclear Attraction Matrix V_nuc:
-    ```
     $(results.V_nuc_matrix)
-    ```
     
     ### Core Hamiltonian H_core = T + V_nuc:
-    ```
     $(results.H_core)
-    ```
     
     ### Final Fock Matrix F:
-    ```
     $(results.F_matrix)
-    ```
     
     ### Orbital Coefficients C:
-    ```
     $(results.coefficients)
-    ```
     
     ### Energy at each iteration:
     $(join([@sprintf("Iter %d: %.6f Ha", i, e) for (i, e) in enumerate(results.energy_history)], "\n\n"))
@@ -329,7 +344,7 @@ else
     md""
 end
 
-# ╔═╡ footer_cell
+# ╔═╡ 11888f66-e554-11f0-a50c-5ffcc4f8abdb
 md"""
 ---
 ### About This Notebook
@@ -341,8 +356,8 @@ This interactive notebook demonstrates restricted Hartree-Fock for H₂. Try adj
 
 The overlap matrix shows how basis functions overlap in space. Diagonal elements are always 1 (perfect self-overlap), while off-diagonal elements decrease as atoms move apart.
 
-**Implementation:** Julia with BasisSets.jl
-**Author:** Keiran Rowell with Claude Sonnet 4.5 prompting of written code
+**Implementation:** Julia with BasisSets.jl 
+**Author:** Keiran Rowell with prompting of Claude Sonnet 4.5 on written Julia code
 
 **Source Code:** 
 - `HF_modular.jl` - Main SCF algorithm
@@ -355,19 +370,20 @@ The overlap matrix shows how basis functions overlap in space. Diagonal elements
 """
 
 # ╔═╡ Cell order:
-# ╟─title_cell
-# ╟─parameters_cell
-# ╠═package_cell
-# ╟─include_core
-# ╠═computation_cell
-# ╟─results_cell
-# ╟─overlap_matrix_plot
-# ╟─convergence_plot
-# ╟─energy_curve_cell
-# ╠═energy_scan
-# ╟─energy_curve_plot
-# ╟─orbital_energies_cell
-# ╟─comparison_cell
-# ╟─basis_comparison
-# ╟─debug_info_cell
-# ╟─footer_cell
+# ╟─11887cfe-e554-11f0-8d4b-91fdf4f00424
+# ╟─11887f10-e554-11f0-b61c-6deb71c75560
+# ╟─11887fae-e554-11f0-82c5-3b9f30359809
+# ╟─11888046-e554-11f0-b19b-03f592d5fbbc
+# ╟─118880f0-e554-11f0-a3b2-397a4cb1e92b
+# ╟─118881ba-e554-11f0-b539-4fe915e86069
+# ╟─118882a8-e554-11f0-bfb9-ef3e96197a4e
+# ╟─11888398-e554-11f0-b86b-658e50a7d273
+# ╟─1188844c-e554-11f0-81e5-079d1222e769
+# ╟─118884e2-e554-11f0-951d-333c758eec27
+# ╟─1188862c-e554-11f0-812e-a98fc52b6429
+# ╟─11888834-e554-11f0-bd67-9736ec200ca1
+# ╟─11888a0a-e554-11f0-a085-75a20887cc50
+# ╟─11888a5c-e554-11f0-ab90-6df4a78a6603
+# ╟─11888db6-e554-11f0-a0c7-91704c3e027c
+# ╟─11888e30-e554-11f0-ac5d-07da46ccf627
+# ╟─11888f66-e554-11f0-a50c-5ffcc4f8abdb
