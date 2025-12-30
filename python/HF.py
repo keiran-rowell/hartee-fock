@@ -17,7 +17,7 @@ from integrals import(
 )
 
 # Set up logging so intermediate matrices only print in debug mode (logging.DEBUG)
-logging.basicConfig(level=logging.DEBUG, format='%(message)s')
+logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger(__name__)
 
 # Construct the molecule
@@ -46,7 +46,7 @@ R_B = atoms[1]['coords']
 R = np.linalg.norm(R_A - R_B) # Simple internuclear distance
 Z = 1.0 if atoms[0]['element'] == 'H' else None # Not implementing other atoms for toy example
 
-basis_set_name='STO-3G'
+basis_set_name='6-31G'
 # Parse basis sets
 basis_set_json =  basis_set_exchange.get_basis(basis_set_name, elements=['1'], fmt='json', header=False)
 basis_set_data = json.loads(basis_set_json)
@@ -74,8 +74,6 @@ for shell in n_shells:
 n_basis = len(basis_functions)
 logger.debug(f'exponents: {exponents}')
 logger.debug(f'contraction_coeffs: {contraction_coeffs}')
-logger.debug(f'n_basis: {n_basis}')
-
 
 ## Initialised Density Matrix with random pertubations instead of zeroes to avoid rapid convergence
 #D = np.random.rand(n_basis, n_basis) * 0.01
@@ -102,7 +100,6 @@ logger.debug(f'ERI[0,0,0,0] = {ERIs[0,0,0,0]:.6f}')  # Should be ~0.77 for H2/ST
 logger.debug(f'ERI[0,0,1,1] = {ERIs[0,0,1,1]:.6f}')  # Should be ~0.44
 logger.info('ERIs computed!')
 
-## DEBUG H_core
 H_core = T + V_nuc
 logger.info(f'H_core matrix:\n{H_core}')
 
@@ -135,13 +132,10 @@ for iteration in range(max_iter):
     logger.debug(f'G matrix:\n{G}')
     F = T + V_nuc + G 
     logger.debug(f'H_core:\n{T + V_nuc}')
-    logger.debug(f'G matrix:\n{G}')
-    logger.debug(f'F\n{F}')
-
 
     ## Calculate Orthogonalisation Matrix
     s_eigvals, s_eigvecs = np.linalg.eigh(S)
-    logger.info(f'S matrix eigenvalues: {s_eigvals}')
+    logger.debug(f'S matrix eigenvalues: {s_eigvals}')
     X = s_eigvecs @ np.diag(s_eigvals**-0.5) @ s_eigvecs.T
     logger.debug(f'X orthogonalisation matrix:\n {X}')
 
@@ -155,8 +149,7 @@ for iteration in range(max_iter):
     logger.info(f'epsilon orbital energies:\n {epsilon}')
 
     C = X @ C_prime
-    logger.debug(f'C.T @ S @ C (should be identity):\n{C.T @ S @ C}')
-    logger.info(f'C coefficient matrix:\n {C}')
+    logger.debug(f'C coefficient matrix:\n {C}')
     
     # Update Density Matrix
     num_electrons = len(atoms) # Assuming each H contributes 1 electron. Not implementing proper count
@@ -164,18 +157,10 @@ for iteration in range(max_iter):
         logger.error("Number of electrons is odd, cannot proceed with restricted HF.")
     num_occ = num_electrons // 2
     
-    #DEBUG wrong orbital being populated due to energy inversions
-    logger.debug(f'Orbital 0 energy: {epsilon[0]:.6f}, coefficients: {C[:, 0]}')
-    logger.debug(f'Orbital 1 energy: {epsilon[1]:.6f}, coefficients: {C[:, 1]}')
-    logger.debug(f'num_occ = {num_occ}, so occupying orbitals 0 to {num_occ-1}')
-    logger.debug(f'Occupied orbital coefficients:\n{C[:, :num_occ]}')
-
     D_new = 2 * C[:, :int(num_occ)] @ C[:, :int(num_occ)].T
     logger.debug(f'D_new density matrix:\n {D_new}')
 
     E_elec = 0.5 * np.trace(D_new @ (T + V_nuc + F))
-    logger.debug(f'trace(D): {np.trace(D):.6f}')
-    logger.debug(f'trace(S @ D) (should be 2.0): {np.trace(S @ D):.6f}')
     E_total = E_elec + E_nuc_repulsion
     delta_E = abs(E_total - E_old)
 
