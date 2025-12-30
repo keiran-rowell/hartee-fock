@@ -2,6 +2,8 @@
 using LinearAlgebra
 using BasisSets
 using Printf
+using Logging
+using LoggingExtras
 
 include("integrals.jl")
 
@@ -12,16 +14,27 @@ function main()
    Intended to show the main components of the SCF cycles without getting lost in the maths
    """
 
+   # Set logging format, basically remove 'Info:' from in front of regular messages
+   base_format = FormatLogger(stdout) do io, args
+        if args.level == Logging.Info
+            println(io, args.message)
+        else
+            println(io, "$(args.level): $(args.message)")
+        end
+    end   
+   clean_logger = MinLevelLogger(base_format, Logging.Info)
+   global_logger(clean_logger)
+   
    # Molecule and basis set setup
    molecule_filename = "../H2.xyz"
    basis_set_name = "cc-pVTZ"
 
    # Parse molecule and basis set using BasisSets.jl
-   println("Reading molecule from $molecule_filename...")
+   @info "Reading molecule from $molecule_filename..."
    h2_mol = molecule(molecule_filename)
    basis_functions_raw = parsebasis(h2_mol, basis_set_name)
 
-   println("Parsed $(length(basis_functions_raw)) basis functions")
+   @debug "Parsed $(length(basis_functions_raw)) basis functions"
 
    # Convert BasisSets.jl format to our dictionary format
    # BasisSets.jl stores: R (center), α (exponents), d (coefficients), N (normalization)
@@ -47,8 +60,8 @@ function main()
    end
 
    n_basis = length(basis_functions)
-   println("Number of basis functions: $n_basis")
-   println("Number of atoms: $(length(atoms))")
+   @debug "Number of basis functions: $n_basis"
+   @debug "Number of atoms: $(length(atoms))"
 
    # Calculate internuclear distance
    R_A = atoms[1]["coords"]
@@ -56,43 +69,40 @@ function main()
    R = norm(R_A - R_B)
    Z = 1.0  # Hydrogen
 
-   println("Internuclear distance: $(@sprintf("%.6f", R)) Bohr")
+   @debug "Internuclear distance: $(@sprintf("%.6f", R)) Bohr"
 
    # Initialize Density Matrix
    D = zeros(n_basis, n_basis)
 
    # Build nuclear attraction potential matrix
-   println("\nBuilding nuclear attraction matrix...")
+   @debug "Building nuclear attraction matrix..."
    V_nuc = build_V_nuc_matrix(basis_functions, atoms)
-   println("V_nuc matrix:")
-   display(V_nuc)
-   println()
+   @debug "V_nuc matrix:"
+   @debug display(V_nuc)
 
    # Build one-electron overlap and kinetic energy matrices
-   println("\nBuilding overlap and kinetic energy matrices...")
+   @debug "Building overlap and kinetic energy matrices..."
    S, T = build_S_and_T_matrices(basis_functions)
-   println("S overlap matrix:")
-   display(S)
-   println("\nT kinetic energy matrix:")
-   display(T)
-   println()
+   @debug "S overlap matrix:"
+   @debug display(S)
+   @debug "T kinetic energy matrix:"
+   @debug T
 
    # Build ERIs once before SCF loop
-   println("\nComputing electron repulsion integrals...")
+   @info "Computing electron repulsion integrals..."
    eri_start = time()
    ERIs = build_ERI_tensor(basis_functions)
    eri_end = time()
-   println("ERIs computed in $(@sprintf("%.3f", eri_end - eri_start)) seconds")
+   @info "ERIs computed in $(@sprintf("%.3f", eri_end - eri_start)) seconds"
 
    # Core Hamiltonian
    H_core = T + V_nuc
-   println("\nH_core matrix:")
-   display(H_core)
-   println()
+   @debug "H_core matrix:"
+   @debug display(H_core)
 
    # Compute nuclear repulsion energy (Born-Oppenheimer approximation)
    E_nuc_repulsion = Z * Z / R
-   println("\nNuclear repulsion energy: $(@sprintf("%.6f", E_nuc_repulsion)) Ha")
+   @debug "Nuclear repulsion energy: $(@sprintf("%.6f", E_nuc_repulsion)) Ha"
 
    # SCF loop setup
    max_iter = 50
@@ -102,7 +112,7 @@ function main()
    E_total = 0.0
    ϵ = nothing
 
-   println("\n🔁 Starting SCF iterations...")
+   @info "🔁 Starting SCF iterations..."
    scf_start = time()
 
    for iteration in 1:max_iter
@@ -120,7 +130,7 @@ function main()
        
        # Update coefficient matrix
        ϵ, C_prime = eigen(Symmetric(F_prime))
-       println("Orbital energies: $ϵ")
+       @debug "Orbital energies: $ϵ"
        
        C = X * C_prime
        
@@ -138,13 +148,13 @@ function main()
        E_total = E_elec + E_nuc_repulsion
        ΔE = abs(E_total - E_old)
        
-       println("\nIteration $iteration: E = $(@sprintf("%.6f", E_total)) Ha, ΔE = $(@sprintf("%.2e", ΔE))\n")
+       @info "Iteration $iteration: E = $(@sprintf("%.6f", E_total)) Ha, ΔE = $(@sprintf("%.2e", ΔE))"
        
        # Check for SCF convergence
        if ΔE < ϵ_tol
            scf_end = time()
-           println("\n✓ SCF Converged in $iteration iterations!")
-           println("Time taken: $(@sprintf("%.3f", scf_end - scf_start)) seconds")
+           @info "✓ SCF Converged in $iteration iterations!"
+           @info "Time taken: $(@sprintf("%.3f", scf_end - scf_start)) seconds"
            converged = true
            break
        else
@@ -154,11 +164,11 @@ function main()
    end
 
    if !converged
-       println("\n✗ SCF did not converge within the maximum number of iterations.")
+       @error "✗ SCF did not converge within the maximum number of iterations."
    end
 
-   println("\nFinal SCF Energy: $(@sprintf("%.6f", E_total)) Ha")
-   println("Final orbital energies: $ϵ")
+   @info "Final SCF Energy: $(@sprintf("%.6f", E_total)) Ha"
+   @info "Final orbital energies: $ϵ"
 end
 
 main()
