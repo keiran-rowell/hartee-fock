@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Hartree-Fock SCF Demo</title>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .controls { margin: 20px 0; }
+        input[type="range"] { width: 300px; }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .output-section {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        #summary {
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        #log-output {
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+            background: #fff;
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <h1>🐍 Hartree-Fock SCF Demo</h1>
+
+    <div class="controls">
+        <label>
+            Bond Length (R): <span id="r-value">1.4</span> Bohr
+        </label><br>
+        <input type="range" id="r-slider" min="0.5" max="2.5" step="0.1" value="1.4">
+
+        <br><br>
+
+        <label>
+            Basis Set:
+            <select id="basis-select">
+                <option value="STO-3G">STO-3G</option>
+                <option value="6-31G">6-31G</option>
+            </select>
+        </label>
+
+        <br><br>
+
+        <label>
+            <input type="checkbox" id="show-log">
+            Show detailed log
+        </label>
+
+        <br><br>
+
+        <button id="run-button" disabled>Loading...</button>
+    </div>
+
+    <h3>Results:</h3>
+    <div class="output-section">
+        <div id="summary">Initializing Pyodide...</div>
+    </div>
+
+    <div id="log-section" class="output-section hidden">
+        <h4>Detailed Log:</h4>
+        <div id="log-output"></div>
+    </div>
+
+    <script>
+        let pyodide;
+
+        async function loadPyodideEnvironment() {
+            try {
+                pyodide = await loadPyodide();
+                await pyodide.loadPackage(['numpy', 'micropip']);
+
+                const micropip = pyodide.pyimport('micropip');
+                await micropip.install('basis-set-exchange');
+
+                // Load Python modules
+                const integrals = await fetch('integrals.py').then(r => r.text());
+                const runHf = await fetch('run_HF.py').then(r => r.text());
+
+                pyodide.FS.writeFile('/integrals.py', integrals);
+                pyodide.FS.writeFile('/run_HF.py', runHf);
+
+               // Add current directory to Python path so the above can be found
+               await pyodide.runPythonAsync(`
+               import sys
+               if '/' not in sys.path:
+                   sys.path.append('/')
+               `);
+
+                document.getElementById('summary').textContent = 'Ready! Adjust parameters and click Run SCF.';
+                document.getElementById('run-button').textContent = 'Run SCF';
+                document.getElementById('run-button').disabled = false;
+            } catch (error) {
+                document.getElementById('summary').textContent = 'Error loading: ' + error;
+            }
+        }
+
+        // Update R value display
+        document.getElementById('r-slider').addEventListener('input', (e) => {
+            document.getElementById('r-value').textContent = e.target.value;
+        });
+
+        // Toggle log visibility
+        document.getElementById('show-log').addEventListener('change', (e) => {
+            const logSection = document.getElementById('log-section');
+            if (e.target.checked) {
+                logSection.classList.remove('hidden');
+            } else {
+                logSection.classList.add('hidden');
+            }
+        });
+
+        // Run SCF calculation
+        document.getElementById('run-button').addEventListener('click', async () => {
+            const R = parseFloat(document.getElementById('r-slider').value);
+            const basis = document.getElementById('basis-select').value;
+            const button = document.getElementById('run-button');
+
+            button.disabled = true;
+            button.textContent = 'Running...';
+            document.getElementById('summary').textContent = 'Running SCF calculation...';
+
+            try {
+                const result = await pyodide.runPythonAsync(`
+from run_HF import main
+result = main(R=${R}, basis_set_name='${basis}')
+result
+                `);
+
+                // Display summary results
+                const converged = result.get('converged') ? '✓' : '✗';
+                document.getElementById('summary').textContent =
+                    `${converged} Converged in ${result.get('iterations')} iterations!\n` +
+                    `Final Energy: ${result.get('energy').toFixed(6)} Ha\n` +
+                    `Orbital Energies: [${result.get('epsilon').map(e => e.toFixed(6)).join(', ')}]`;
+
+                // Display detailed log
+                document.getElementById('log-output').textContent = result.get('log');
+
+            } catch (error) {
+                document.getElementById('summary').textContent = 'Error: ' + error;
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Run SCF';
+            }
+        });
+
+        // Initialize on page load
+        loadPyodideEnvironment();
+    </script>
+</body>
+</html>
