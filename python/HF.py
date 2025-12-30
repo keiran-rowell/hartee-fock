@@ -8,6 +8,7 @@ import basis_set_exchange
 import numpy as np
 import json
 import logging
+import time
 
 from integrals import(
     build_S_and_T_matrices,
@@ -46,7 +47,7 @@ R_B = atoms[1]['coords']
 R = np.linalg.norm(R_A - R_B) # Simple internuclear distance
 Z = 1.0 if atoms[0]['element'] == 'H' else None # Not implementing other atoms for toy example
 
-basis_set_name='6-31G'
+basis_set_name='cc-pVTZ'
 # Parse basis sets
 basis_set_json =  basis_set_exchange.get_basis(basis_set_name, elements=['1'], fmt='json', header=False)
 basis_set_data = json.loads(basis_set_json)
@@ -95,10 +96,12 @@ logger.info(f'T kinetic energy matrix:\n {T}')
 
 ## Build the ERIs once before SCF loop
 logger.info('Computing electron repulsion integrals...')
+eri_start = time.time()
 ERIs = build_ERI_tensor(basis_functions)
+eri_end = time.time()
+logger.info(f'ERIs computed in {eri_end - eri_start:.3f} seconds')
 logger.debug(f'ERI[0,0,0,0] = {ERIs[0,0,0,0]:.6f}')  # Should be ~0.77 for H2/STO-3G
 logger.debug(f'ERI[0,0,1,1] = {ERIs[0,0,1,1]:.6f}')  # Should be ~0.44
-logger.info('ERIs computed!')
 
 H_core = T + V_nuc
 logger.info(f'H_core matrix:\n{H_core}')
@@ -124,7 +127,7 @@ converged = False
 E_old = 0.0
 
 logger.info('\n🔁 Starting SCF iterations...')
-
+scf_start = time.time()
 for iteration in range(max_iter):
 
     ## Build the Fock Matrix 
@@ -168,7 +171,8 @@ for iteration in range(max_iter):
 
     # Check for SCF convergence
     if delta_E < epsilon_tol:
-        logger.info(f"\n✓ SCF Converged in {iteration+1} iterations!")
+        scf_end = time.time()
+        logger.info(f"\n✓ SCF Converged in {iteration+1} iterations! \n Time taken: {scf_end - scf_start:.3f} seconds")
         converged = True
         break
     else:
