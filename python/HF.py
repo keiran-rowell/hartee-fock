@@ -32,15 +32,17 @@ def read_xyz(file_path):
         atoms.append(atom)
     return atoms
 
+molecule_filename='../h2.xyz'
 ## Read xyz file to set atomic positions
-atoms = read_xyz('../h2.xyz')
+atoms = read_xyz(molecule_filename)
 R_A = atoms[0]['coords']
 R_B = atoms[1]['coords']
 R = np.linalg.norm(R_A - R_B) # Simple internuclear distance
 Z = 1.0 if atoms[0]['element'] == 'H' else None # Not implementing other atoms for toy example
 
+basis_set_name='STO-3G'
 # Parse basis sets
-basis_set_json =  basis_set_exchange.get_basis('STO-3G', elements=['1'], fmt='json', header=False)
+basis_set_json =  basis_set_exchange.get_basis(basis_set_name, elements=['1'], fmt='json', header=False)
 basis_set_data = json.loads(basis_set_json)
 logger.debug(f'basis_set_data:\n {basis_set_data}')
 ## Basis sets in searchable JSON form!
