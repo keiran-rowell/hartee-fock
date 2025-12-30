@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <title>Hartree-Fock SCF Demo</title>
     <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -66,13 +67,6 @@
 
         <br><br>
 
-        <label>
-            <input type="checkbox" id="show-log">
-            Show detailed log
-        </label>
-
-        <br><br>
-
         <button id="run-button" disabled>Loading...</button>
     </div>
 
@@ -80,6 +74,34 @@
     <div class="output-section">
         <div id="summary">Initializing Pyodide...</div>
     </div>
+
+   <div class="output-section">
+       <h4>Overlap Matrix S:</h4>
+       <div id="overlap-matrix"></div>
+   </div>
+
+   <div class="output-section">
+       <h4>SCF Convergence:</h4>
+       <div id="scf-convergence"></div>
+   </div>
+
+   <div class="output-section">
+       <h4>Orbital Energies:</h4>
+       <div id="orbital-energies"></div>
+   </div>
+
+   <div class="output-section">
+       <h4>H₂ Potential Energy Surface:</h4>
+       <button id="pes-button">Calculate PES Curve</button>
+       <div id="pes-curve"></div>
+   </div>
+
+        <label>
+            <input type="checkbox" id="show-log">
+            Show detailed log
+        </label>
+
+        <br><br>
 
     <div id="log-section" class="output-section hidden">
         <h4>Detailed Log:</h4>
@@ -119,6 +141,115 @@
             }
         }
 
+        // Plotting functions
+        function plotOverlapMatrix(S) {
+            const data = [{
+                z: S,
+                type: 'heatmap',
+                colorscale: 'Viridis',
+                showscale: true
+            }];
+            
+            const layout = {
+                title: 'Overlap Matrix S',
+                xaxis: { title: 'Basis function' },
+                yaxis: { title: 'Basis function' }
+            };
+            
+            Plotly.newPlot('overlap-matrix', data, layout);
+        }
+
+        function plotSCFConvergence(energyHistory) {
+            const data = [{
+                x: Array.from({length: energyHistory.length}, (_, i) => i + 1),
+                y: energyHistory,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Energy',
+                marker: { color: '#4CAF50' }
+            }];
+            
+            const layout = {
+                title: 'SCF Convergence',
+                xaxis: { title: 'Iteration' },
+                yaxis: { title: 'Energy (Ha)' }
+            };
+            
+            Plotly.newPlot('scf-convergence', data, layout);
+        }
+
+        function plotOrbitalEnergies(epsilon) {
+            const data = [{
+                y: epsilon,
+                type: 'bar',
+                marker: { 
+                    color: epsilon.map((e, i) => e < 0 ? 'blue' : 'red')
+                }
+            }];
+            
+            const layout = {
+                title: 'Molecular Orbital Energies',
+                xaxis: { 
+                    title: 'Orbital', 
+                    tickvals: Array.from({length: epsilon.length}, (_, i) => i),
+                    ticktext: epsilon.map((e, i) => e < 0 ? `Occ ${i+1}` : `Virt ${i+1}`)
+                },
+                yaxis: { title: 'Energy (Ha)' }
+            };
+            
+            Plotly.newPlot('orbital-energies', data, layout);
+        }
+
+        async function plotPESCurve() {
+            const basis = document.getElementById('basis-select').value;
+            const pesButton = document.getElementById('pes-button');
+            
+            pesButton.disabled = true;
+            pesButton.textContent = 'Computing PES...';
+            
+            const R_values = [];
+            const energies = [];
+            
+            try {
+                for (let R = 0.5; R <= 2.5; R += 0.1) {
+                    const result = await pyodide.runPythonAsync(`
+from run_HF import main
+result = main(R=${R.toFixed(1)}, basis_set_name='${basis}')
+result
+                    `);
+                    R_values.push(R);
+                    energies.push(result.get('energy'));
+                    
+                    // Update progress
+                    pesButton.textContent = `Computing PES... ${R_values.length}/21`;
+                }
+                
+                const data = [{
+                    x: R_values,
+                    y: energies,
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    name: 'Energy',
+                    marker: { color: '#4CAF50' }
+                }];
+                
+                const layout = {
+                    title: 'H₂ Potential Energy Surface',
+                    xaxis: { title: 'Bond Length (Bohr)' },
+                    yaxis: { title: 'Energy (Ha)' }
+                };
+                
+                Plotly.newPlot('pes-curve', data, layout);
+                pesButton.textContent = 'Recalculate PES Curve';
+                
+            } catch (error) {
+                document.getElementById('pes-curve').textContent = 'Error: ' + error;
+                pesButton.textContent = 'Calculate PES Curve';
+            } finally {
+                pesButton.disabled = false;
+            }
+        }
+
         // Update R value display
         document.getElementById('r-slider').addEventListener('input', (e) => {
             document.getElementById('r-value').textContent = e.target.value;
@@ -133,6 +264,9 @@
                 logSection.classList.add('hidden');
             }
         });
+
+        // PES button handler
+        document.getElementById('pes-button').addEventListener('click', plotPESCurve);
 
         // Run SCF calculation
         document.getElementById('run-button').addEventListener('click', async () => {
@@ -151,15 +285,46 @@ result = main(R=${R}, basis_set_name='${basis}')
 result
                 `);
 
+        // Wasn't reading properly before, convert directly from Python dict entries to JS objects
+        const data = result.toJs({dict_converter: Object.fromEntries});
+       
+        // Debug: Check what we got back
+        console.log('Data:', data);
+        console.log('S_matrix:', data.S_matrix);
+        console.log('energy_history:', data.energy_history);
+        console.log('epsilon:', data.epsilon);
+
                 // Display summary results
-                const converged = result.get('converged') ? '✓' : '✗';
+                const converged = data.converged ? '✓' : '✗';
                 document.getElementById('summary').textContent =
-                    `${converged} Converged in ${result.get('iterations')} iterations!\n` +
-                    `Final Energy: ${result.get('energy').toFixed(6)} Ha\n` +
-                    `Orbital Energies: [${result.get('epsilon').map(e => e.toFixed(6)).join(', ')}]`;
+                    `${converged} Converged in ${data.iterations} iterations!\n` +
+                    `Final Energy: ${data.energy.toFixed(6)} Ha\n` +
+                    `Orbital Energies: [${data.epsilon.map(e => e.toFixed(6)).join(', ')}]`;
 
                 // Display detailed log
-                document.getElementById('log-output').textContent = result.get('log');
+                document.getElementById('log-output').textContent = data.log;
+
+          // Create plots
+         if (data.S_matrix) {
+            console.log('Plotting S matrix...');
+            plotOverlapMatrix(data.S_matrix);
+        } else {
+            console.error('No S_matrix in result');
+        }
+        
+        if (data.energy_history) {
+            console.log('Plotting convergence...');
+            plotSCFConvergence(data.energy_history);
+        } else {
+            console.error('No energy_history in result');
+        }
+        
+        if (data.epsilon) {
+            console.log('Plotting orbital energies...');
+            plotOrbitalEnergies(data.epsilon);
+        } else {
+            console.error('No epsilon in result');
+        }
 
             } catch (error) {
                 document.getElementById('summary').textContent = 'Error: ' + error;

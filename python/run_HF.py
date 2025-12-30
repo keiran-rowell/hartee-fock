@@ -117,6 +117,7 @@ def main(R=1.4, basis_set_name="STO-3G"):
     epsilon_tol = 1e-6
     converged = False
     E_old = 0.0
+    energy_history = [] 
 
     logger.info("\n🔁 Starting SCF iterations...")
     scf_start = time.time()
@@ -161,6 +162,7 @@ def main(R=1.4, basis_set_name="STO-3G"):
 
         E_elec = 0.5 * np.trace(D_new @ (T + V_nuc + F))
         E_total = E_elec + E_nuc_repulsion
+        energy_history.append(E_total)
         delta_E = abs(E_total - E_old)
 
         logger.info(
@@ -195,4 +197,6 @@ def main(R=1.4, basis_set_name="STO-3G"):
         "iterations": iteration + 1,
         "epsilon": epsilon.tolist(),
         "log": log_output,
+        "S_matrix" : S.tolist(),
+        "energy_history": energy_history,
     }
