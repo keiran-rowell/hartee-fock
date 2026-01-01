@@ -1,0 +1,52 @@
+{
+    "molssi_bse_schema": {
+        "schema_type": "complete",
+        "schema_version": "0.1"
+    },
+    "revision_description": "Data from Gaussian09",
+    "revision_date": "2018-06-19",
+    "elements": {
+        "1": {
+            "electron_shells": [
+                {
+                    "function_type": "gto",
+                    "region": "",
+                    "angular_momentum": [
+                        0
+                    ],
+                    "exponents": [
+                        "0.1309756377E+01",
+                        "0.2331359749E+00"
+                    ],
+                    "coefficients": [
+                        [
+                            "0.4301284983E+00",
+                            "0.6789135305E+00"
+                        ]
+                    ]
+                }
+            ],
+            "references": [
+                {
+                    "reference_description": "STO-2G Minimal Basis (2 functions/AO)",
+                    "reference_keys": [
+                        "hehre1969a"
+                    ]
+                }
+            ]
+        }
+    },
+    "version": "1",
+    "function_types": [
+        "gto"
+    ],
+    "names": [
+        "STO-2G"
+    ],
+    "tags": [],
+    "family": "sto",
+    "description": "STO-2G Minimal Basis (2 functions/AO)",
+    "role": "orbital",
+    "auxiliaries": {},
+    "name": "STO-2G"
+}

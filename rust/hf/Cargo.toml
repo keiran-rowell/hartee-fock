@@ -1,0 +1,9 @@
+[package]
+name = "hf"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+basis_set = { git = "https://github.com/iggedi-ig-ig/fock-rs", package = "basis_set" }
+serde = "1.0"
+serde_json = "1.0"
