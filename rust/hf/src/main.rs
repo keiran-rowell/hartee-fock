@@ -2,31 +2,41 @@ use std::fs;
 use serde_json;
 use basis_set::BasisSet;
 
-fn main() {
-    let basis_set_dir = "basis_sets";
+#[derive(Debug)]
+pub struct BasisSetData {
+    pub name: String,
+    pub description: String,
+    pub basis_set: BasisSet,
+}
 
-    let basis_set_files = fs::read_dir(basis_set_dir).expect("Failed to read basis set directory");
+fn load_basis_sets(basis_sets_dir: &str) -> Vec<BasisSetData> {
+    let mut basis_sets = Vec::new();
 
-    for basis_set_file in basis_set_files {
-        let entry = basis_set_file.expect("Failed to read basis set file entry");
-        let path = entry.path();
-        // Only process JSON files
-        if path.extension().and_then(|s| s.to_str()) == Some("json") {
-         println!("\n=== Loading: {} ===", path.display());
+    for entry in fs::read_dir(basis_sets_dir).expect("Failed to read basis set directory") { 
+        let entry = entry.expect("Failed to read directory entry");
+
+        if entry.path().extension().and_then(|s| s.to_str()) == Some("json") {
+            let path = entry.path();
+            let json = fs::read_to_string(&path).expect("Basis set unavailable or unreadable");
+            let value: serde_json::Value = serde_json::from_str(&json).expect("Failed to parse basis set JSON");
+            let basis_set: BasisSet = serde_json::from_str(&json).expect("Failed to make basis set structure from JSON");
+
+            let name = value["name"].as_str().unwrap_or("Unknown").to_string();
+            let description = value["description"].as_str().unwrap_or("No description").to_string();
+            println!("Loaded basis set: {} ", description);
+
+            basis_sets.push(BasisSetData {
+                name: path.file_stem().and_then(|s| s.to_str()).unwrap_or("unknown").to_string(),
+                description,
+                basis_set,
+            });
         }
-
-        let json = fs::read_to_string(&path).expect("Basis set unavailable or unreadable");
-
-        // For accessing raw JSON data if needed without dealing with struct
-        let json_value: serde_json::Value = serde_json::from_str(&json).expect("Failed to parse basis set JSON");
-        let name = json_value["name"].as_str().unwrap_or("Unknown");
-        let description = json_value["description"].as_str().unwrap_or("No description");
-
-        println!("Loaded basis set: {} ", description);
-
-        // Use external crate to parse JSON into BasisSet struct
-        // BasisSet currently only supports 'pople', 'sto', and 'dunning' types
-        let basis_set: BasisSet = serde_json::from_str(&json).expect("Failed to parse basis set JSON");
-        //println!("Loaded basis set: \n{:#?})", basis_set);
     }
+    basis_sets
+}
+
+fn main() {
+    let basis_sets = load_basis_sets("basis_sets");
+
+    println!("\n=== Loaded {} basis sets ===\n", basis_sets.len());
 }
