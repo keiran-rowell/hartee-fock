@@ -166,74 +166,85 @@ fn main() {
     let e_nuc_rep = 1.0 * 1.0 / r;
     debug!("Nuclear repulsion energy: {}", e_nuc_rep);
 
-    let g_matrix = integrals::build_g_matrix(&eri_tensor, &d_matrix);
-    debug!("G matrix:\n{}", g_matrix);
-    let f_matrix= &t_matrix + &v_matrix + &g_matrix;
-    debug!("Fock matrix F:\n{}", f_matrix);
+    let mut e_old = 0.0;
+    let max_iter = 50;
+    let conv_thres = 1e-9;
 
-    let (s_eigvals, s_eigvecs) = s_matrix.eig().expect("Eigendecomposition of S failed");
-    debug!("Eigenvalues of S:\n{}", s_eigvals);
-    debug!("Eigenvectors of S:\n{}", s_eigvecs);
+    for iter in 0..max_iter {
+        let g_matrix = integrals::build_g_matrix(&eri_tensor, &d_matrix);
+        debug!("G matrix:\n{}", g_matrix);
+        let f_matrix= &t_matrix + &v_matrix + &g_matrix;
+        debug!("Fock matrix F:\n{}", f_matrix);
 
-    // clean up S^-1/2 in case of tiny eigenvalues
-    let s_inv_sqrt_diag = Array2::from_diag(
-        &s_eigvals.map(|v: &c64| {
-            let val = v.re.max(1e-15); 
-            val.powf(-0.5)
-        })
-    );
+        let (s_eigvals, s_eigvecs) = s_matrix.eig().expect("Eigendecomposition of S failed");
+        debug!("Eigenvalues of S:\n{}", s_eigvals);
+        debug!("Eigenvectors of S:\n{}", s_eigvecs);
 
-    // Only the real part needed since S is symmetric real. Julia handled this automatically
-    let u = s_eigvecs.map(|v| v.re);
-    let x = u.dot(&s_inv_sqrt_diag).dot(&u.t());
+        // clean up S^-1/2 in case of tiny eigenvalues
+        let s_inv_sqrt_diag = Array2::from_diag(
+            &s_eigvals.map(|v: &c64| {
+                let val = v.re.max(1e-15); 
+                val.powf(-0.5)
+            })
+        );
 
-    let f_prime = x.t().dot(&f_matrix).dot(&x);
-    debug!("Transformed Fock matrix F':\n{}", f_prime);
+        // Only the real part needed since S is symmetric real. Julia handled this automatically
+        let u = s_eigvecs.map(|v| v.re);
+        let x = u.dot(&s_inv_sqrt_diag).dot(&u.t());
 
-    // Diagnonalize F' to get orbital energies and coefficients in orthonormal basis    
-    let (epsilon_complex, c_prime_complex) = f_prime.eig().expect("Fock diagonalization failed");
-    let epsilon = epsilon_complex.map(|v| v.re);
-    let c_prime = c_prime_complex.map(|v| v.re);
-    debug!("Orbital energies: {:?}", epsilon);
+        let f_prime = x.t().dot(&f_matrix).dot(&x);
+        debug!("Transformed Fock matrix F':\n{}", f_prime);
 
-    // back-transform coefficients to original basis
-    let c = x.dot(&c_prime);
-    debug!("Molecular orbital coefficients:\n{}", c);
+        // Diagnonalize F' to get orbital energies and coefficients in orthonormal basis    
+        let (epsilon_complex, c_prime_complex) = f_prime.eig().expect("Fock diagonalization failed");
+        let epsilon = epsilon_complex.map(|v| v.re);
+        let c_prime = c_prime_complex.map(|v| v.re);
+        debug!("Orbital energies: {:?}", epsilon);
+
+        // back-transform coefficients to original basis
+        let c = x.dot(&c_prime);
+        debug!("Molecular orbital coefficients:\n{}", c);
 
 
-   let num_electrons = 2; // Hardcoding for now 
-   if num_electrons % 2 != 0 {
-      panic!("Restricted Hartree-Fock requires an even number of electrons!");
-   }
-   let num_occ = num_electrons / 2;
+        let num_electrons = 2; // Hardcoding for now 
+        if num_electrons % 2 != 0 {
+            panic!("Restricted Hartree-Fock requires an even number of electrons!");
+        }
 
-   // In Rust the eigenvalues from LAPACK are not automatically sorted, so we need to sort them and the corresponding coefficients
-   // Unlike Julia, Rust does not have built-in sorting that returns indices, so we create a vector of indices and sort that
-   let mut indices: Vec<usize> = (0..epsilon.len()).collect();
-   indices.sort_by(|&i, &j| epsilon[i].partial_cmp(&epsilon[j]).unwrap());
+        // In Rust the eigenvalues from LAPACK are not automatically sorted, so we need to sort them and the corresponding coefficients
+        // Unlike Julia, Rust does not have built-in sorting that returns indices, so we create a vector of indices and sort that
+        let mut indices: Vec<usize> = (0..epsilon.len()).collect();
+        indices.sort_by(|&i, &j| epsilon[i].partial_cmp(&epsilon[j]).unwrap());
 
-   let lowest_idx = indices[0];
-   let c_occ = c.column(lowest_idx);
+        let lowest_idx = indices[0];
+        let c_occ = c.column(lowest_idx);
 
-   // Rust magic I needed a lot of LLM help for 
+        // Rust magic I needed a lot of LLM help for 
+        let c_view = c_occ.view().insert_axis(ndarray::Axis(1));
+        d_matrix = 2.0 * c_view.dot(&c_view.t());
+        for i in 0..n_basis {
+            for j in 0..n_basis {
+                d_matrix[[i, j]] = 0.0;
+                    d_matrix[[i, j]] += 2.0 * c_occ[[i]] * c_occ[[j]]; 
+            }
+        }
+        debug!("Density matrix D:\n{}", d_matrix);
 
-   let c_view = c_occ.view().insert_axis(ndarray::Axis(1));
-   d_matrix = 2.0 * c_view.dot(&c_view.t());
-   for i in 0..n_basis {
-       for j in 0..n_basis {
-           d_matrix[[i, j]] = 0.0;
-               d_matrix[[i, j]] += 2.0 * c_occ[[i]] * c_occ[[j]]; 
-       }
-   }
-   debug!("Density matrix D:\n{}", d_matrix);
+        let e_elec = 0.5 * (&d_matrix * (&h_core + &f_matrix)).sum();
+        debug!("Electronic energy: {}", e_elec);
+        debug!("Nuclear repulsion energy: {}", e_nuc_rep);
+        let e_total = e_elec + e_nuc_rep;
 
-   let e_elec = 0.5 * (&d_matrix * (&h_core + &f_matrix)).sum();
-   debug!("Electronic energy: {}", e_elec);
-   debug!("Nuclear repulsion energy: {}", e_nuc_rep);
-   let e_total = e_elec + e_nuc_rep;
+        let delta_e = (e_total - e_old).abs();
+        println!("Energy: {:.10} Hartrees, Delta: {:.10}", e_total, delta_e);
 
-   let e_old = 0.0;
-   let delta_e = (e_total - e_old).abs();
-   println!("Energy: {:.10} Hartrees, Delta: {:.10}", e_total, delta_e);
-
+        if delta_e < conv_thres {
+            println!("SCF converged in {} iterations.", iter + 1);
+            println!("🦀");
+            let electrons = (&d_matrix * &s_matrix).sum();
+            debug!("Total electrons in system: {:.4}", electrons);
+            break;
+        }
+        e_old = e_total;
+    }
 }
