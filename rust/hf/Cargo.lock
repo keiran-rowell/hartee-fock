@@ -126,6 +126,7 @@ name = "hf"
 version = "0.1.0"
 dependencies = [
  "basis_set",
+ "nalgebra",
  "serde",
  "serde_json",
 ]
