@@ -1,0 +1,11 @@
+/home/keiran/code/hartee-fock/rust/hf/target/debug/deps/openblas_build-121244800bc09423.d: /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/openblas-build-0.10.13/src/lib.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/openblas-build-0.10.13/src/build.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/openblas-build-0.10.13/src/check.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/openblas-build-0.10.13/src/download.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/openblas-build-0.10.13/src/error.rs
+
+/home/keiran/code/hartee-fock/rust/hf/target/debug/deps/libopenblas_build-121244800bc09423.rlib: /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/openblas-build-0.10.13/src/lib.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/openblas-build-0.10.13/src/build.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/openblas-build-0.10.13/src/check.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/openblas-build-0.10.13/src/download.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/openblas-build-0.10.13/src/error.rs
+
+/home/keiran/code/hartee-fock/rust/hf/target/debug/deps/libopenblas_build-121244800bc09423.rmeta: /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/openblas-build-0.10.13/src/lib.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/openblas-build-0.10.13/src/build.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/openblas-build-0.10.13/src/check.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/openblas-build-0.10.13/src/download.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/openblas-build-0.10.13/src/error.rs
+
+/home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/openblas-build-0.10.13/src/lib.rs:
+/home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/openblas-build-0.10.13/src/build.rs:
+/home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/openblas-build-0.10.13/src/check.rs:
+/home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/openblas-build-0.10.13/src/download.rs:
+/home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/openblas-build-0.10.13/src/error.rs:

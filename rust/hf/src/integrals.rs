@@ -1,34 +1,32 @@
 use std::f64::consts::PI;
 use ndarray::Array2;
+use ndarray::Array4;
 
 use crate::BasisSetData;
 
+#[inline]
+pub fn dist_sq(r1: &[f64; 3], r2: &[f64; 3]) -> f64 {
+    (r1[0] - r2[0]).powi(2) + (r1[1] - r2[1]).powi(2) + (r1[2] - r2[2]).powi(2)
+}
+
 pub fn compute_s_primitive (alpha: f64, beta: f64, r_a: &[f64; 3], r_b: &[f64; 3]) -> f64 {
     // Normalisation factor for primitive s-type Gaussian functions
-    let norm = (2.0 * alpha / PI).powf(0.75) * (2.0 * beta / PI).powf(0.75);
-
-    let dist_sq: f64 = (r_a[0] - r_b[0]).powi(2)
-        + (r_a[1] - r_b[1]).powi(2)
-        + (r_a[2] - r_b[2]).powi(2);
+    let norm_factor = (2.0 * alpha / PI).powf(0.75) * (2.0 * beta / PI).powf(0.75);
 
     let prefactor = (PI / (alpha + beta)).powf(1.5);
-    let exponent =  -(alpha * beta / (alpha + beta)) * dist_sq;
+    let exponent =  -(alpha * beta / (alpha + beta)) * dist_sq(r_a, r_b);
 
-    norm * prefactor * exponent.exp()
+    norm_factor * prefactor * exponent.exp()
 }
 
 pub fn compute_t_primitive (alpha: f64,  beta: f64, r_a: &[f64; 3], r_b: &[f64; 3], s_prim: f64) -> f64 {
     let reduced_exponent = (alpha * beta) / (alpha + beta);
-    
-    let dist_sq: f64 = (r_a[0] - r_b[0]).powi(2)
-        + (r_a[1] - r_b[1]).powi(2)
-        + (r_a[2] - r_b[2]).powi(2);
 
-    reduced_exponent * (3.0 - 2.0 * reduced_exponent * dist_sq) * s_prim
+    reduced_exponent * (3.0 - 2.0 * reduced_exponent * dist_sq(r_a, r_b)) * s_prim
 }
 
 pub fn compute_v_nuc_primitive (alpha: f64, beta: f64, r_a: &[f64; 3], r_b: &[f64; 3], r_nuc: &[f64; 3], z_nuc: f64) -> f64 {
-    let norm = (2.0 * alpha / PI).powf(0.75) * (2.0 * beta / PI).powf(0.75);
+    let norm_factor = (2.0 * alpha / PI).powf(0.75) * (2.0 * beta / PI).powf(0.75);
 
     let zeta = alpha + beta;
     // Compute the weighted product center of the two Gaussians
@@ -54,9 +52,30 @@ pub fn compute_v_nuc_primitive (alpha: f64, beta: f64, r_a: &[f64; 3], r_b: &[f6
 
     let v_unnrom = (2.0 * PI / zeta) * k_ab * f_0;
 
-    -z_nuc * norm * v_unnrom
+    -z_nuc * norm_factor * v_unnrom
 }
 
+pub fn compute_eri_primitive( // straight from Gemini
+    a: f64, b: f64, c: f64, d: f64,
+    ra: &[f64; 3], rb: &[f64; 3], rc: &[f64; 3], rd: &[f64; 3]
+) -> f64 {
+    let zeta = a + b;
+    let eta = c + d;
+    let rho = (zeta * eta) / (zeta + eta);
+
+    let p = [ (a*ra[0] + b*rb[0])/zeta, (a*ra[1] + b*rb[1])/zeta, (a*ra[2] + b*rb[2])/zeta ];
+    let q = [ (c*rc[0] + d*rd[0])/eta, (c*rc[1] + d*rd[1])/eta, (c*rc[2] + d*rd[2])/eta ];
+    
+    let dist_pq_sq = (p[0]-q[0]).powi(2) + (p[1]-q[1]).powi(2) + (p[2]-q[2]).powi(2);
+    
+    let kab = (-(a*b/zeta) * dist_sq(ra, rb)).exp();
+    let kcd = (-(c*d/eta) * dist_sq(rc, rd)).exp();
+
+    let x = rho * dist_pq_sq;
+    let f0 = if x < 1e-10 { 1.0 } else { (0.5 * (PI/x).sqrt()) * libm::erf(x.sqrt()) };
+
+    (2.0 * PI.powf(2.5)) / (zeta * eta * (zeta + eta).sqrt()) * kab * kcd * f0
+}
 
 pub fn build_one_electron_matrices (basis_functions: &[BasisSetData], r_a: &[f64; 3], r_b: &[f64; 3]) -> (Array2<f64>, Array2<f64>, Array2<f64>) {
     let n_basis = basis_functions.len();
@@ -103,4 +122,88 @@ pub fn build_one_electron_matrices (basis_functions: &[BasisSetData], r_a: &[f64
         }
     }
     (s_matrix, t_matrix, v_matrix) 
+}
+
+pub fn build_eri_tensor_symmetric( //straight from Gemini with evaluations dropped due to symmetry considerations
+    basis_functions: &[BasisSetData],
+    r_coords: &[[f64; 3]]
+) -> Array4<f64> {
+    let n = basis_functions.len();
+    let mut eri = Array4::<f64>::zeros((n, n, n, n));
+
+    for i in 0..n {
+        for j in 0..=i { // i >= j
+            let ij = i * (i + 1) / 2 + j;
+            for k in 0..n {
+                for l in 0..=k { // k >= l
+                    let kl = k * (k + 1) / 2 + l;
+                    
+                    if ij >= kl {
+                        let mut val = 0.0;
+                        
+                        // Contract primitives
+                        for (p_i, &alpha) in basis_functions[i].exponents.iter().enumerate() {
+                            for (p_j, &beta) in basis_functions[j].exponents.iter().enumerate() {
+                                for (p_k, &gamma) in basis_functions[k].exponents.iter().enumerate() {
+                                    for (p_l, &delta) in basis_functions[l].exponents.iter().enumerate() {
+                                        
+                                        let res = compute_eri_primitive(
+                                            alpha, beta, gamma, delta,
+                                            &r_coords[i], &r_coords[j], &r_coords[k], &r_coords[l]
+                                        );
+
+                                        // Normalisation for each primitive
+                                        let n_i = (2.0 * alpha / PI).powf(0.75);
+                                        let n_j = (2.0 * beta / PI).powf(0.75);
+                                        let n_k = (2.0 * gamma / PI).powf(0.75);
+                                        let n_l = (2.0 * delta / PI).powf(0.75);
+                                        let norm_factor = n_i * n_j * n_k * n_l;
+
+                                        let norm_coeffs = 
+                                            basis_functions[i].coefficients[p_i] *
+                                            basis_functions[j].coefficients[p_j] *
+                                            basis_functions[k].coefficients[p_k] *
+                                            basis_functions[l].coefficients[p_l];
+
+                                        val += norm_coeffs * res * norm_factor;
+                                    }
+                                }
+                            }
+                        }
+
+                        // Apply the value to all 8 symmetric positions
+                        eri[[i, j, k, l]] = val;
+                        eri[[j, i, k, l]] = val;
+                        eri[[i, j, l, k]] = val;
+                        eri[[j, i, l, k]] = val;
+                        eri[[k, l, i, j]] = val;
+                        eri[[l, k, i, j]] = val;
+                        eri[[k, l, j, i]] = val;
+                        eri[[l, k, j, i]] = val;
+                    }
+                }
+            }
+        }
+    }
+    eri
+}
+
+pub fn build_g_matrix(eri: &Array4<f64>, d_matrix: &Array2<f64>) -> Array2<f64> {
+    let n = d_matrix.nrows();
+    let mut g_mat = Array2::<f64>::zeros((n, n));
+
+    for i in 0..n {
+        for j in 0..n {
+            let mut val = 0.0;
+            for k in 0..n {
+                for l in 0..n {
+                    // Coulomb (J) - 0.5 * Exchange (K)
+                    let term = eri[[i, j, k, l]] - 0.5 * eri[[i, l, k, j]];
+                    val += d_matrix[[k, l]] * term;
+                }
+            }
+            g_mat[[i, j]] = val;
+        }
+    }
+    g_mat
 }
