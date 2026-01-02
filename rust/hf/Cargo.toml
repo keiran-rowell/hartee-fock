@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 basis_set = { git = "https://github.com/iggedi-ig-ig/fock-rs", package = "basis_set" }
+libm = "0.2.15"
 nalgebra = "0.30.1"
 ndarray = "0.17.1"
 serde = "1.0"
