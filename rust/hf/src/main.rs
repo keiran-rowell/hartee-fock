@@ -79,11 +79,15 @@ fn main() {
     println!("Basis function exponents: {:?}", &basis.exponents);
     println!("Basis function coefficients: {:?}", &basis.coefficients);
 
-    let s_primitive = integrals::compute_S_primitive(
+    let s_primitive = integrals::compute_s_primitive(
         basis.exponents[0],
         basis.exponents[0],
         &r_a,
         &r_b
     ); 
     println!("Overlap integral (primitive): {}", s_primitive);
+
+    let (s_matrix, t_matrix) = integrals::build_s_and_t_matrices(std::slice::from_ref(basis), &r_a, &r_b);
+    println!("Overlap matrix S:\n{}", s_matrix);
+    println!("Kinetic energy matrix T:\n{}", t_matrix);
 }

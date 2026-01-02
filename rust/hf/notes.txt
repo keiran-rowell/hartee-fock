@@ -1,0 +1,1 @@
+Tomorrow change basis functions to just take in exponents, coefficients, r_a, r_b
