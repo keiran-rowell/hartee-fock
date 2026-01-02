@@ -10,7 +10,7 @@ pub fn compute_S_primitive (alpha: f64, beta: f64, r_a: &[f64; 3], r_b: &[f64; 3
         + (r_a[1] - r_b[1]).powi(2)
         + (r_a[2] - r_b[2]).powi(2);
 
-    let exponent =  (alpha * beta / (alpha + beta)) * distance_squared;
+    let exponent =  -(alpha * beta / (alpha + beta)) * distance_squared;
     let s_unnormalized = (PI / (alpha + beta)).powf(1.5) * exponent.exp();
 
     norm_alpha * norm_beta * s_unnormalized

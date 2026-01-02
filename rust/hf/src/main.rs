@@ -67,7 +67,7 @@ fn main() {
     println!("\n=== Loaded {} basis sets ===\n", basis_sets.len());
     println!("{:#?}", basis_sets[0]);
 
-    let basis_name = "6-31G";
+    let basis_name = "STO-2G";
     let basis = basis_sets
         .iter()
         .find(|bs| bs.name == basis_name)
