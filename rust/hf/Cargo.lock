@@ -431,6 +431,7 @@ dependencies = [
  "nalgebra",
  "ndarray",
  "ndarray-linalg",
+ "rayon",
  "serde",
  "serde_json",
 ]
