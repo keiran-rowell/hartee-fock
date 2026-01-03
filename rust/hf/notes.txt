@@ -1,1 +1,1 @@
-Tomorrow change basis functions to just take in exponents, coefficients, r_a, r_b
+Need to move all the core function of th SCF solver into lib.rs, so that main.rs just calls it (and builds a local binary). Then #[wasm_bindgen] is very similar to main.rs in that it calls the SCF solver

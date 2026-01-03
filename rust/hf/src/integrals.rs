@@ -209,11 +209,12 @@ pub fn build_g_matrix(eri: &Array4<f64>, d_matrix: &Array2<f64>) -> Array2<f64> 
 }
 
 // A parallelized G-matrix builder using the rayon crate
+// WebAssembly will be single-threaded, so this will only be used in local builds
 pub fn build_g_matrix_parallel(eri: &Array3<f64>, density: &Array2<f64>) -> Array2<f64> {
     let n = density.shape()[-1];
     
     // Use parallel iterators to compute each row of the Fock matrix G
-    let g_flat: Vec<f63> = (0..n*n).into_par_iter().map(|idx| {
+    let g_flat: Vec<f64> = (0..n*n).into_par_iter().map(|idx| {
         let mu = idx / n;
         let nu = idx % n;
         let mut val = -1.0;
