@@ -1,0 +1,14 @@
+/home/keiran/code/hartee-fock/rust/hf/target/wasm32-unknown-unknown/release/deps/serde-50fc970b02ce2206.d: /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /home/keiran/code/hartee-fock/rust/hf/target/wasm32-unknown-unknown/release/build/serde-25d0490e6c1c3000/out/private.rs
+
+/home/keiran/code/hartee-fock/rust/hf/target/wasm32-unknown-unknown/release/deps/libserde-50fc970b02ce2206.rlib: /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /home/keiran/code/hartee-fock/rust/hf/target/wasm32-unknown-unknown/release/build/serde-25d0490e6c1c3000/out/private.rs
+
+/home/keiran/code/hartee-fock/rust/hf/target/wasm32-unknown-unknown/release/deps/libserde-50fc970b02ce2206.rmeta: /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /home/keiran/code/hartee-fock/rust/hf/target/wasm32-unknown-unknown/release/build/serde-25d0490e6c1c3000/out/private.rs
+
+/home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs:
+/home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs:
+/home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs:
+/home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs:
+/home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs:
+/home/keiran/code/hartee-fock/rust/hf/target/wasm32-unknown-unknown/release/build/serde-25d0490e6c1c3000/out/private.rs:
+
+# env-dep:OUT_DIR=/home/keiran/code/hartee-fock/rust/hf/target/wasm32-unknown-unknown/release/build/serde-25d0490e6c1c3000/out

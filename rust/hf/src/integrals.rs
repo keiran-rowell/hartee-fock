@@ -290,29 +290,37 @@ pub fn build_g_matrix(eri: &Array4<f64>, d_matrix: &Array2<f64>) -> Array2<f64> 
 // A parallelized G-matrix builder using the rayon crate
 // WebAssembly will be single-threaded, so this will only be used in local builds
 pub fn build_g_matrix_parallel(eri: &Array4<f64>, density: &Array2<f64>) -> Array2<f64> {
-    use rayon::prelude::*;
-    
-    let n = density.nrows();
-    
-    // Use parallel iterators to compute each element of the G matrix
-    let g_flat: Vec<f64> = (0..n*n)
-        .into_par_iter()
-        .map(|idx| {
-            let mu = idx / n;
-            let nu = idx % n;
-            let mut val = 0.0;
-            
-            for lam in 0..n {
-                for sig in 0..n {
-                    // Coulomb (J) - 0.5 * Exchange (K)
-                    let j = eri[[mu, nu, lam, sig]];
-                    let k = eri[[mu, lam, nu, sig]];
-                    val += density[[lam, sig]] * (j - 0.5 * k);
-                }
-            }
-            val
-        })
-        .collect();
-    
-    Array2::from_shape_vec((n, n), g_flat).unwrap()
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+       use rayon::prelude::*;
+       
+       let n = density.nrows();
+       
+       // Use parallel iterators to compute each element of the G matrix
+       let g_flat: Vec<f64> = (0..n*n)
+           .into_par_iter()
+           .map(|idx| {
+               let mu = idx / n;
+               let nu = idx % n;
+               let mut val = 0.0;
+               
+               for lam in 0..n {
+                   for sig in 0..n {
+                       // Coulomb (J) - 0.5 * Exchange (K)
+                       let j = eri[[mu, nu, lam, sig]];
+                       let k = eri[[mu, lam, nu, sig]];
+                       val += density[[lam, sig]] * (j - 0.5 * k);
+                   }
+               }
+               val
+           })
+           .collect();
+       
+       Array2::from_shape_vec((n, n), g_flat).unwrap()
+   }
+   #[cfg(target_arch = "wasm32")]
+    {
+        // WASM doesn't support rayon, fall back to serial
+        build_g_matrix(eri, density)
+    }
 }

@@ -1,11 +1,8 @@
 use log::debug;
 use ndarray::{Array2,Array4};
-use ndarray_linalg::{Eig, c64};
 
 mod integrals; // bring in integrals from a external module
 use integrals::{BasisSetData, load_basis_sets, dist_sq};
-
-use rayon::prelude::*; // for parallel G-matrix builder
 
 fn debug_matrix_values(basis: BasisSetData, basis_functions: Vec<BasisSetData>, r_a: [f64; 3], r_b: [f64; 3]) {
 
@@ -37,11 +34,13 @@ fn debug_matrix_values(basis: BasisSetData, basis_functions: Vec<BasisSetData>, 
 
 }
 
+
+
 fn main() {
     env_logger::init();
 
     let r_a = [0.0, 0.0, 0.0];
-    let r_b = [0.0, 0.0, 1.4]; 
+    let r_b = [0.0, 0.0, 1.4];
     let r = dist_sq(&r_a, &r_b).sqrt();
     debug!("Inter-nuclear distance: {}", r);
 
@@ -53,11 +52,11 @@ fn main() {
         .iter()
         .find(|bs| bs.name == basis_name)
         .expect("Basis set not found");
-    
+
     debug!("{:#?}", basis);
     debug!("Basis function exponents: {:?}", &basis.exponents);
     debug!("Basis function coefficients: {:?}", &basis.coefficients);
-    
+
     let mut basis = basis.clone(); //needs to be mutable to normalise
     basis.normalise();
     debug!("Post-norm coefficients: {:?}", basis.coefficients);
@@ -65,16 +64,14 @@ fn main() {
     let basis_functions = vec![basis.clone(), basis.clone()]; // two basis functions, one on each atom
     let n_basis = basis_functions.len();
 
-    debug_matrix_values(basis, basis_functions.clone(), r_a, r_b);
-
     let (s_matrix, t_matrix, v_matrix) = integrals::build_one_electron_matrices(basis_functions.as_slice(), &r_a, &r_b);
     debug!("Overlap matrix S:\n{}", s_matrix);
     debug!("Kinetic energy matrix T:\n{}", t_matrix);
     debug!("Nuclear attraction matrix V:\n{}", v_matrix);
-    
+
     // Build density matrix D with all zeroes as a guess
     let mut d_matrix = Array2::<f64>::zeros((n_basis, n_basis));
-    
+
     let eri_tensor = integrals::build_eri_tensor_symmetric(basis_functions.as_slice(), &[r_a, r_b]);
     debug!("Electron repulsion integral tensor ERI:\n{:?}", eri_tensor);
 
@@ -91,61 +88,63 @@ fn main() {
     for iter in 0..max_iter {
         let g_matrix = integrals::build_g_matrix(&eri_tensor, &d_matrix);
         debug!("G matrix:\n{}", g_matrix);
-        let f_matrix= &t_matrix + &v_matrix + &g_matrix;
+        let f_matrix = &t_matrix + &v_matrix + &g_matrix;
         debug!("Fock matrix F:\n{}", f_matrix);
 
-        let (s_eigvals, s_eigvecs) = s_matrix.eig().expect("Eigendecomposition of S failed");
-        debug!("Eigenvalues of S:\n{}", s_eigvals);
-        debug!("Eigenvectors of S:\n{}", s_eigvecs);
+        // Use nalgebra for eigendecomposition
+        use nalgebra as na;
+        
+        let s_na = na::Matrix2::<f64>::from_row_slice(s_matrix.as_slice().unwrap());
+        let eig_s = s_na.symmetric_eigen();
+        
+        debug!("Eigenvalues of S: {:?}", eig_s.eigenvalues.as_slice());
+        debug!("Eigenvectors of S:\n{}", eig_s.eigenvectors);
 
-        // clean up S^-1/2 in case of tiny eigenvalues
-        let s_inv_sqrt_diag = Array2::from_diag(
-            &s_eigvals.map(|v: &c64| {
-                let val = v.re.max(1e-15); 
-                val.powf(-0.5)
-            })
+        // Create S^(-1/2)
+        let s_inv_sqrt_diag = na::Matrix2::from_diagonal(
+            &eig_s.eigenvalues.map(|v| v.max(1e-15).powf(-0.5))
         );
-
-        // Only the real part needed since S is symmetric real. Julia handled this automatically
-        let u = s_eigvecs.map(|v| v.re);
-        let x = u.dot(&s_inv_sqrt_diag).dot(&u.t());
-
-        let f_prime = x.t().dot(&f_matrix).dot(&x);
+        
+        let x = &eig_s.eigenvectors * &s_inv_sqrt_diag * eig_s.eigenvectors.transpose();
+        
+        // Transform Fock matrix
+        let f_prime = x.transpose() * na::Matrix2::<f64>::from_row_slice(f_matrix.as_slice().unwrap()) * x;
         debug!("Transformed Fock matrix F':\n{}", f_prime);
 
-        // Diagnonalize F' to get orbital energies and coefficients in orthonormal basis    
-        let (epsilon_complex, c_prime_complex) = f_prime.eig().expect("Fock diagonalization failed");
-        let epsilon = epsilon_complex.map(|v| v.re);
-        let c_prime = c_prime_complex.map(|v| v.re);
-        debug!("Orbital energies: {:?}", epsilon);
+        let eig_f = f_prime.symmetric_eigen();
+        let epsilon = eig_f.eigenvalues;
+        let c_prime = eig_f.eigenvectors;
+        let c = x * c_prime;
+        
+        debug!("Orbital energies: {:?}", epsilon.as_slice());
 
-        // back-transform coefficients to original basis
-        let c = x.dot(&c_prime);
+        // Convert back to ndarray
+        let c = Array2::from_shape_vec(
+            (2, 2),
+            c.as_slice().to_vec()
+        ).unwrap();
         debug!("Molecular orbital coefficients:\n{}", c);
 
-
-        let num_electrons = 2; // Hardcoding for now 
+        let num_electrons = 2; // Hardcoding for now
         if num_electrons % 2 != 0 {
             panic!("Restricted Hartree-Fock requires an even number of electrons!");
         }
 
-        // In Rust the eigenvalues from LAPACK are not automatically sorted, so we need to sort them and the corresponding coefficients
-        // Unlike Julia, Rust does not have built-in sorting that returns indices, so we create a vector of indices and sort that
+        // Sort eigenvalues and get lowest orbital
         let mut indices: Vec<usize> = (0..epsilon.len()).collect();
         indices.sort_by(|&i, &j| epsilon[i].partial_cmp(&epsilon[j]).unwrap());
 
         let lowest_idx = indices[0];
         let c_occ = c.column(lowest_idx);
 
-        // Rust magic I needed a lot of LLM help for 
-        let c_view = c_occ.view().insert_axis(ndarray::Axis(1));
-        d_matrix = 2.0 * c_view.dot(&c_view.t());
+        // Build density matrix
+        let mut d_new = Array2::<f64>::zeros((n_basis, n_basis));
         for i in 0..n_basis {
             for j in 0..n_basis {
-                d_matrix[[i, j]] = 0.0;
-                    d_matrix[[i, j]] += 2.0 * c_occ[[i]] * c_occ[[j]]; 
+                d_new[[i, j]] = 2.0 * c_occ[[i]] * c_occ[[j]];
             }
         }
+        d_matrix = d_new;
         debug!("Density matrix D:\n{}", d_matrix);
 
         let e_elec = 0.5 * (&d_matrix * (&h_core + &f_matrix)).sum();
@@ -167,26 +166,3 @@ fn main() {
     }
 }
 
-
-// A parallelized G-matrix builder using the rayon crate
-pub fn build_g_matrix_parallel(eri: &Array4<f64>, density: &Array2<f64>) -> Array2<f64> {
-    let n = density.shape()[0];
-    
-    // Use parallel iterators to compute each row of the Fock matrix G
-    let g_flat: Vec<f64> = (0..n*n).into_par_iter().map(|idx| {
-        let mu = idx / n;
-        let nu = idx % n;
-        let mut val = 0.0;
-        
-        for lam in 0..n {
-            for sig in 0..n {
-                let j = eri[[mu, nu, lam, sig]];
-                let k = eri[[mu, lam, nu, sig]];
-                val += density[[lam, sig]] * (j - 0.5 * k);
-            }
-        }
-        val
-    }).collect();
-
-    Array2::from_shape_vec((n, n), g_flat).unwrap()
-}

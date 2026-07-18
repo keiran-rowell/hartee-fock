@@ -1,6 +1,7 @@
 use ndarray::Array2;
 use wasm_bindgen::prelude::*;
 use serde::{Serialize, Deserialize};
+use std::collections::HashMap;
 
 pub mod integrals;
 use integrals::{
@@ -8,6 +9,24 @@ use integrals::{
 };
 
 
+// Handle data from the Basis Set Exchange (Bse)
+#[derive(Debug, Deserialize)]
+struct BseJson {
+    pub names: Vec<String>,
+    pub description: String,
+    pub elements: HashMap<String, BseElement>,
+}
+
+#[derive(Debug, Deserialize)]
+struct BseElement {
+    pub electron_shells: Vec<BseShell>,
+}
+
+#[derive(Debug, Deserialize)]
+struct BseShell {
+    pub exponents: Vec<String>,
+    pub coefficients: Vec<Vec<String>>,
+}
 
 /// Results from an HF calculation
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -155,44 +174,45 @@ fn calculate_scf(bond_dist: f64, basis_name: &str) -> HFResult {
     }
 }
 
-/// Embedded basis sets for WASM (no file I/O)
+/// Embedded basis sets for WASM with strings generated a compile time (no file I/O)
 fn get_basis_set(name: &str) -> BasisSetData {
-    match name {
-        "STO-3G" => BasisSetData {
-            name: "STO-3G".to_string(),
-            description: "STO-3G minimal basis".to_string(),
-            exponents: vec![0.168855, 0.623913, 3.425251],
-            coefficients: vec![0.444635, 0.535328, 0.154329],
-        },
-        "STO-2G" => BasisSetData {
-            name: "STO-2G".to_string(),
-            description: "STO-2G (minimal)".to_string(),
-            exponents: vec![0.270950, 1.409570],
-            coefficients: vec![0.430129, 0.678914],
-        },
-        "3-21G" => BasisSetData {
-            name: "3-21G".to_string(),
-            description: "3-21G split valence".to_string(),
-            // Inner shell
-            exponents: vec![5.447178, 0.824547, 0.183192],
-            coefficients: vec![0.156285, 0.904691, 0.0],
-        },
-        "6-31G" => BasisSetData {
-            name: "6-31G".to_string(),
-            description: "6-31G Pople basis".to_string(),
-            exponents: vec![18.731137, 2.825394, 0.640122],
-            coefficients: vec![0.033495, 0.234727, 0.813757],
-        },
-        _ => {
-            // Default to STO-3G
-            BasisSetData {
-                name: "STO-3G".to_string(),
-                description: "STO-3G minimal basis".to_string(),
-                exponents: vec![0.168855, 0.623913, 3.425251],
-                coefficients: vec![0.444635, 0.535328, 0.154329],
-            }
+    let raw_json = match name {
+        "STO-2G" => include_str!("../basis_sets/sto-2g-H.json"),
+        "STO-3G" => include_str!("../basis_sets/sto-3g-H.json"),
+        "3-21G"  => include_str!("../basis_sets/3-21g-H.json"),
+        "6-31G"  => include_str!("../basis_sets/6-31g-H.json"),
+        "cc-pVDZ" => include_str!("../basis_sets/cc-pvDZ-H.json"),
+        "cc-pVTZ" => include_str!("../basis_sets/cc-pvTZ-H.json"),
+        "cc-pVQZ" => include_str!("../basis_sets/cc-pvQZ-H.json"),
+        _ => include_str!("../basis_sets/sto-2g-H.json"),
+      };
+
+      let parsed: BseJson = serde_json::from_str(raw_json)
+        .unwrap_or_else(|_| panic!("Failed to parse embedded JSON for {}", name));
+
+      let element_data = parsed.elements.get("1")
+          .expect("Missing Hydrogen (element 1) in the basis set json");
+
+      let mut exponents = Vec::new();
+      let mut coefficients = Vec::new();
+
+      // Iterate and flatten all shells (handles split-valence and polarization functions safely)
+      for shell in &element_data.electron_shells {
+          for exp_str in &shell.exponents {
+              exponents.push(exp_str.parse::<f64>().unwrap());
+       }
+       // Grab the first coefficient array inside the shell matrix
+       for coef_str in &shell.coefficients[0] {
+           coefficients.push(coef_str.parse::<f64>().unwrap());
         }
     }
+
+   BasisSetData {
+     name: parsed.names.first().cloned().unwrap_or_else(|| name.to_string()),
+     description: parsed.description,
+     exponents,
+     coefficients,
+   }
 }
 
 // Expose integrals module for library use
