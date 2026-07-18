@@ -144,10 +144,11 @@ fn calculate_scf(bond_dist: f64, basis_name: &str) -> HFResult {
         let c_prime = eig_f.eigenvectors;
         let c = x * c_prime;
         
-        // Convert back to ndarray
+        // Convert back to ndarray - fix Column-major into Row-major nalgebra ndarray bug
+        let c_row_major = c.transpose();
         let c = Array2::from_shape_vec(
             (2, 2),
-            c.as_slice().to_vec()
+            c_row_major.as_slice().to_vec()
         ).unwrap();        
  
         // Build density matrix from occupied orbitals

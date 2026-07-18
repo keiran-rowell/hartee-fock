@@ -1,5 +1,5 @@
 use log::debug;
-use ndarray::{Array2,Array4};
+use ndarray::Array2;
 
 mod integrals; // bring in integrals from a external module
 use integrals::{BasisSetData, load_basis_sets, dist_sq};
@@ -118,10 +118,11 @@ fn main() {
         
         debug!("Orbital energies: {:?}", epsilon.as_slice());
 
-        // Convert back to ndarray
+        // Convert back to ndarray - fix Column-major into Row-major nalgebra ndarray bug
+        let c_row_major = c.transpose();
         let c = Array2::from_shape_vec(
             (2, 2),
-            c.as_slice().to_vec()
+            c_row_major.as_slice().to_vec()
         ).unwrap();
         debug!("Molecular orbital coefficients:\n{}", c);
 
