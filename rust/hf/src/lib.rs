@@ -19,29 +19,6 @@ pub struct HFResult {
     pub nuclear_repulsion: f64,
 }
 
-#[wasm_bindgen]
-impl HFResult {
-    #[wasm_bindgen(getter)]
-    pub fn converged(&self) -> bool {
-        self.converged
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn final_energy(&self) -> f64 {
-        self.final_energy
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn iterations(&self) -> u32 {
-        self.iterations
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn nuclear_repulsion(&self) -> f64 {
-        self.nuclear_repulsion
-    }
-}
-
 /// Run HF calculation for H2 at given bond distance
 /// bond_dist: internuclear distance in Bohr
 /// Returns: HFResult with energy and convergence info
@@ -112,7 +89,7 @@ fn calculate_scf(bond_dist: f64, basis_name: &str) -> HFResult {
         // Use nalgebra for eigendecomposition (works on WASM + native)
         use nalgebra as na;
         
-        let s_na = na::Matrix2::<f64>::from_row_slice(&s_matrix.to_vec());
+        let s_na = na::Matrix2::<f64>::from_row_slice(s_matrix.as_slice().unwrap());
         let eig_s = s_na.symmetric_eigen();
         
         // Create S^(-1/2)
@@ -123,7 +100,7 @@ fn calculate_scf(bond_dist: f64, basis_name: &str) -> HFResult {
         let x = &eig_s.eigenvectors * &s_inv_sqrt_diag * eig_s.eigenvectors.transpose();
         
         // Transform Fock matrix
-        let f_prime = x.transpose() * na::Matrix2::<f64>::from_row_slice(&f_matrix.to_vec()) * x;
+        let f_prime = x.transpose() * na::Matrix2::<f64>::from_row_slice(f_matrix.as_slice().unwrap()) * x;
         let eig_f = f_prime.symmetric_eigen();
         
         let epsilon = eig_f.eigenvalues;
