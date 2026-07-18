@@ -73,7 +73,7 @@ pub fn run_hf_with_basis(bond_dist: f64, basis_name: &str) -> HFResult {
 }
 
 /// Core SCF calculation
-fn calculate_scf(bond_dist: f64, basis_name: &str) -> HFResult {
+pub fn calculate_scf(bond_dist: f64, basis_name: &str) -> HFResult {
     // Hardcoded basis sets for WASM (embedded)
     let basis = get_basis_set(basis_name);
     
@@ -126,28 +126,29 @@ fn calculate_scf(bond_dist: f64, basis_name: &str) -> HFResult {
         // Use nalgebra for eigendecomposition (works on WASM + native)
         use nalgebra as na;
         
-        let s_na = na::Matrix2::<f64>::from_row_slice(s_matrix.as_slice().unwrap());
+        let s_na = na::DMatrix::<f64>::from_row_slice(n_basis, n_basis, s_matrix.as_slice().unwrap());
         let eig_s = s_na.symmetric_eigen();
         
         // Create S^(-1/2)
-        let s_inv_sqrt_diag = na::Matrix2::from_diagonal(
+        let s_inv_sqrt_diag = na::DMatrix::from_diagonal(
             &eig_s.eigenvalues.map(|v| v.max(1e-15).powf(-0.5))
         );
         
         let x = &eig_s.eigenvectors * &s_inv_sqrt_diag * eig_s.eigenvectors.transpose();
         
         // Transform Fock matrix
-        let f_prime = x.transpose() * na::Matrix2::<f64>::from_row_slice(f_matrix.as_slice().unwrap()) * x;
-        let eig_f = f_prime.symmetric_eigen();
-        
+        let f_na = na::DMatrix::<f64>::from_row_slice(n_basis, n_basis, f_matrix.as_slice().unwrap());
+        let f_prime = &x.transpose() * &f_na * x.clone(); // clone X matrix here so it remains available for recomputin coeff matrix
+        let eig_f = f_prime.symmetric_eigen();       
+ 
         let epsilon = eig_f.eigenvalues;
         let c_prime = eig_f.eigenvectors;
-        let c = x * c_prime;
+        let c = &x * &c_prime;
         
         // Convert back to ndarray - fix Column-major into Row-major nalgebra ndarray bug
         let c_row_major = c.transpose();
         let c = Array2::from_shape_vec(
-            (2, 2),
+            (n_basis, n_basis),
             c_row_major.as_slice().to_vec()
         ).unwrap();        
  
@@ -201,8 +202,12 @@ fn get_basis_set(name: &str) -> BasisSetData {
         "STO-4G" => include_str!("../basis_sets/sto-4g-H.json"),
         "STO-5G" => include_str!("../basis_sets/sto-5g-H.json"),
         "STO-6G" => include_str!("../basis_sets/sto-6g-H.json"),
-        "3-21G"  => include_str!("../basis_sets/3-21g-H.json"),
         "MINI" => include_str!("../basis_sets/MINI-H.json"),
+        "3-21G"  => include_str!("../basis_sets/3-21g-H.json"),
+        "6-31G"  => include_str!("../basis_sets/6-31g-H.json"),
+        "cc-pvDZ"  => include_str!("../basis_sets/cc-pvDZ-H.json"),
+        "cc-pvTZ"  => include_str!("../basis_sets/cc-pvTZ-H.json"),
+        "cc-pvQZ"  => include_str!("../basis_sets/cc-pvQZ-H.json"),
         _ => include_str!("../basis_sets/sto-2g-H.json"),
       };
 
