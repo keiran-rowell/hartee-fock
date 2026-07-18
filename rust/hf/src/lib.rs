@@ -74,21 +74,28 @@ pub fn run_hf_with_basis(bond_dist: f64, basis_name: &str) -> HFResult {
 
 /// Core SCF calculation
 pub fn calculate_scf(bond_dist: f64, basis_name: &str) -> HFResult {
-    // Hardcoded basis sets for WASM (embedded)
-    let basis = get_basis_set(basis_name);
+    let hydrogen_shells = get_basis_set(basis_name);
     
     // H2 geometry: atom A at origin, atom B at (0, 0, bond_dist)
     let r_a = [0.0, 0.0, 0.0];
     let r_b = [0.0, 0.0, bond_dist];
+   
+    let mut basis_functions = Vec::new();
+
+    // Assign all loaded shells to Atom A
+    for shell in &hydrogen_shells {
+        let mut shell_a = shell.clone();
+        shell_a.normalise(); 
+        basis_functions.push(shell_a);
+    }
+
+    // Assign all loaded shells to Atom B
+    for shell in &hydrogen_shells {
+        let mut shell_b = shell.clone();
+        shell_b.normalise(); 
+        basis_functions.push(shell_b);
+    } 
     
-    // Create basis functions: one on each atom
-    let mut basis_a = basis.clone();
-    let mut basis_b = basis.clone();
-    
-    basis_a.normalise();
-    basis_b.normalise();
-    
-    let basis_functions = vec![basis_a, basis_b];
     let n_basis = basis_functions.len();
     
     // Build one-electron matrices
@@ -195,7 +202,7 @@ pub fn calculate_scf(bond_dist: f64, basis_name: &str) -> HFResult {
 }
 
 /// Embedded basis sets for WASM with strings generated a compile time (no file I/O)
-fn get_basis_set(name: &str) -> BasisSetData {
+fn get_basis_set(name: &str) -> Vec<BasisSetData> {
     let raw_json = match name {
         "STO-2G" => include_str!("../basis_sets/sto-2g-H.json"),
         "STO-3G" => include_str!("../basis_sets/sto-3g-H.json"),
@@ -214,41 +221,41 @@ fn get_basis_set(name: &str) -> BasisSetData {
       let parsed: BseJson = serde_json::from_str(raw_json)
         .unwrap_or_else(|_| panic!("Failed to parse embedded JSON for {}", name));
 
-      let element_data = parsed.elements.get("1")
-          .expect("Missing Hydrogen (element 1) in the basis set json");
+      let element_data = parsed.elements.get("1").expect("Missing Hydrogen (element 1) in the basis set json");
 
-      let mut exponents = Vec::new();
-      let mut coefficients = Vec::new();
+      let zeta_squared = match name {
+           "MINI"   => 1.25 * 1.25, // Huzinaga molecular scaling
+           "3-21G"  => 1.15 * 1.15, // Pople inner-valence split scaling
+           _ if name.starts_with("STO") => 1.24 * 1.24, // Pople minimal scaling
+           _        => 1.0, // Baseline fallback
+       };
+      
+      let mut shells = Vec::new();
 
-      // Need to only grab the primary shell for this dummy implementation rather than flatten all the shells in more complicated basis sets 
-      if let Some(primary_shell) = element_data.electron_shells.first() {
-          for exp_str in &primary_shell.exponents {
-              exponents.push(exp_str.parse::<f64>().unwrap());
-       }
-       // Grab the primary coefficient array inside the baseline shell 
-       for coef_str in &primary_shell.coefficients[0] {
-           coefficients.push(coef_str.parse::<f64>().unwrap());
-        }
-    }
+      for shell_data in &element_data.electron_shells {
+         let mut exponents = Vec::new();
+         let mut coefficients = Vec::new();
+   
+         for exp_str in &shell_data.exponents {
+            exponents.push(exp_str.parse::<f64>().unwrap());
+         }
+         for coef_str in &shell_data.coefficients[0] {
+            coefficients.push(coef_str.parse::<f64>().unwrap());
+         }
 
-   let zeta_squared = match name {
-        "MINI"   => 1.25 * 1.25, // Huzinaga molecular scaling
-        "3-21G"  => 1.15 * 1.15, // Pople inner-valence split scaling
-        _ if name.starts_with("STO") => 1.24 * 1.24, // Pople minimal scaling
-        _        => 1.0, // Baseline fallback
-    };
+        let scaled_exponents: Vec<f64> = exponents
+         .iter()
+         .map(|alpha| alpha * zeta_squared)
+         .collect();
 
-    let scaled_exponents: Vec<f64> = exponents
-        .iter()
-        .map(|alpha| alpha * zeta_squared)
-        .collect();
-
-   BasisSetData {
-     name: parsed.names.first().cloned().unwrap_or_else(|| name.to_string()),
-     description: parsed.description,
-     exponents: scaled_exponents,
-     coefficients,
-   }
+        shells.push(BasisSetData {
+          name: parsed.names.first().cloned().unwrap_or_else(|| name.to_string()),
+          description: parsed.description.clone(),
+          exponents: scaled_exponents,
+          coefficients,
+        });
+     }
+   shells
 }
 
 // Expose integrals module for library use
