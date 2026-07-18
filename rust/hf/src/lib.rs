@@ -28,6 +28,24 @@ struct BseShell {
     pub coefficients: Vec<Vec<String>>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Primitive {
+    pub alpha: f64,
+    pub coefficient: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContractedShell {
+    pub angular_momentum: usize, // 0 = S, 1 = P, 2 = D
+    pub center: [f64; 3],        // Physical XYZ coordinates of the atom
+    pub primitives: Vec<Primitive>,
+}
+
+pub struct MoleculeBasis {
+    pub shells: Vec<ContractedShell>,
+    pub total_basis_functions: usize,
+}
+
 /// Results from an HF calculation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[wasm_bindgen]

@@ -53,34 +53,40 @@ pub fn load_basis_sets(basis_sets_dir: &str) -> Vec<BasisSetData> {
             let name = value["name"].as_str().unwrap_or("Unknown").to_string();
             let description = value["description"].as_str().unwrap_or("No description").to_string();
 
-            // Extract electron shell data for Hydrogen (atomic number 1) as an example
-            let shell = &value["elements"]["1"]["electron_shells"][0];
+            // Extract all electron shells now 
+            let electron_shells = value["elements"]["1"]["electron_shells"].as_array().expect("Expected electron_shells array");
 
-            let exponents: Vec<f64> = shell["exponents"]
-                .as_array()
-                .expect("Exponents should be an array")
-                .iter()
-                .map(|v| v.as_str().expect("Originally a string").parse::<f64>().expect("String shoulld parse to f64"))
-                .collect();
+            for shell in electron_shells {
+               let exponents: Vec<f64> = shell["exponents"]
+                   .as_array()
+                   .expect("Exponents should be an array")
+                   .iter()
+                   .map(|v| v.as_str().expect("Originally a string").parse::<f64>().expect("String shoulld parse to f64"))
+                   .collect();
 
-            let coefficients: Vec<f64> = shell["coefficients"][0]
-                .as_array()
-                .expect("Coefficients should be an array")
-                .iter()
-                .map(|v| v.as_str().expect("Originally a string").parse::<f64>().expect("String shoulld parse to f64"))
-                .collect();
+               let coefficients: Vec<f64> = shell["coefficients"][0]
+                   .as_array()
+                   .expect("Coefficients should be an array")
+                   .iter()
+                   .map(|v| v.as_str().expect("Originally a string").parse::<f64>().expect("String shoulld parse to f64"))
+                   .collect();
 
-            debug!("Loaded basis set: {} ", description);
+               debug!("Loaded basis set: {} ", description);
 
-            basis_sets.push(BasisSetData {
-                name,
-                description,
-                exponents,
+               let mut data = BasisSetData {
+                   name: name.clone(),
+                   description: description.clone(), 
+                   exponents,
                 coefficients,
-            });
-        }
-    }
-    basis_sets
+               };
+
+            data.normalise();
+            basis_sets.push(data);
+         }
+      }
+   }
+
+   basis_sets
 }
 
 #[inline]
@@ -166,6 +172,9 @@ pub fn build_one_electron_matrices (basis_functions: &[BasisSetData], r_a: &[f64
     let charges = [1.0, 1.0];
     let nuc_positions = [r_a, r_b];
 
+    // Quick and dirty way to support spilt-valence basis sets
+    let half = n_basis / 2;
+
     // Basis function i is on atom A, basis function j is on atom B
     for (i, bf_i) in basis_functions.iter().enumerate() {
         for (j, bf_j) in basis_functions.iter().enumerate() { 
@@ -175,8 +184,8 @@ pub fn build_one_electron_matrices (basis_functions: &[BasisSetData], r_a: &[f64
         let mut v_val = 0.0;
 
         // MINIMAL CHANGE: Determine the correct coordinates for this pair, for simple diatomic case
-        let pos_i = if i == 0 { r_a } else { r_b };
-        let pos_j = if j == 0 { r_a } else { r_b };
+        let pos_i = if i < half { r_a } else { r_b };
+        let pos_j = if j < half { r_a } else { r_b };
 
         for (&alpha, &coeff_alpha) in bf_i.exponents.iter().zip(bf_i.coefficients.iter()) {
             for (&beta, &coeff_beta) in bf_j.exponents.iter().zip(bf_j.coefficients.iter()) {
@@ -203,12 +212,17 @@ pub fn build_one_electron_matrices (basis_functions: &[BasisSetData], r_a: &[f64
     (s_matrix, t_matrix, v_matrix) 
 }
 
-pub fn build_eri_tensor_symmetric( //straight from Gemini with evaluations dropped due to symmetry considerations
+pub fn build_eri_tensor_symmetric( 
     basis_functions: &[BasisSetData],
     r_coords: &[[f64; 3]]
 ) -> Array4<f64> {
     let n = basis_functions.len();
     let mut eri = Array4::<f64>::zeros((n, n, n, n));
+      
+    // Midpoint mapping for H2 split-valence functions
+    let half = n / 2;
+    let r_a = &r_coords[0];
+    let r_b = &r_coords[1];
 
     for i in 0..n {
         for j in 0..=i { // i >= j
@@ -219,7 +233,13 @@ pub fn build_eri_tensor_symmetric( //straight from Gemini with evaluations dropp
                     
                     if ij >= kl {
                         let mut val = 0.0;
-                        
+
+                        // Dynamic coordinate mapping based on basis function index
+                        let pos_i = if i < half { r_a } else { r_b };
+                        let pos_j = if j < half { r_a } else { r_b };
+                        let pos_k = if k < half { r_a } else { r_b };
+                        let pos_l = if l < half { r_a } else { r_b };
+                     
                         // Contract primitives
                         for (p_i, &alpha) in basis_functions[i].exponents.iter().enumerate() {
                             for (p_j, &beta) in basis_functions[j].exponents.iter().enumerate() {
@@ -228,7 +248,7 @@ pub fn build_eri_tensor_symmetric( //straight from Gemini with evaluations dropp
                                         
                                         let res = compute_eri_primitive(
                                             alpha, beta, gamma, delta,
-                                            &r_coords[i], &r_coords[j], &r_coords[k], &r_coords[l]
+                                            pos_i, pos_j, pos_k, pos_l 
                                         );
 
                                         // Normalisation for each primitive
