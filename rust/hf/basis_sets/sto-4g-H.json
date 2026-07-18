@@ -1,0 +1,57 @@
+{
+    "molssi_bse_schema": {
+        "schema_type": "complete",
+        "schema_version": "0.1"
+    },
+    "revision_description": "Data from Gaussian09",
+    "revision_date": "2018-06-19",
+    "elements": {
+        "1": {
+            "electron_shells": [
+                {
+                    "function_type": "gto",
+                    "region": "",
+                    "angular_momentum": [
+                        0
+                    ],
+                    "exponents": [
+                        "0.8021420155E+01",
+                        "0.1467821061E+01",
+                        "0.4077767635E+00",
+                        "0.1353374420E+00"
+                    ],
+                    "coefficients": [
+                        [
+                            "0.5675242080E-01",
+                            "0.2601413550E+00",
+                            "0.5328461143E+00",
+                            "0.2916254405E+00"
+                        ]
+                    ]
+                }
+            ],
+            "references": [
+                {
+                    "reference_description": "STO-4G Minimal Basis (4 functions/AO)",
+                    "reference_keys": [
+                        "hehre1969a"
+                    ]
+                }
+            ]
+        }
+    },
+    "version": "1",
+    "function_types": [
+        "gto"
+    ],
+    "names": [
+        "STO-4G"
+    ],
+    "tags": [],
+    "family": "sto",
+    "description": "STO-4G Minimal Basis (4 functions/AO)",
+    "role": "orbital",
+    "auxiliaries": {},
+    "name": "STO-4G"
+}
+

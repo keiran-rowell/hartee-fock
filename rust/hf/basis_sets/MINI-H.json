@@ -1,0 +1,56 @@
+{
+    "molssi_bse_schema": {
+        "schema_type": "complete",
+        "schema_version": "0.1"
+    },
+    "revision_description": "Data from the Original Basis Set Exchange",
+    "revision_date": "2007-01-15",
+    "elements": {
+        "1": {
+            "electron_shells": [
+                {
+                    "function_type": "gto",
+                    "region": "valence",
+                    "angular_momentum": [
+                        0
+                    ],
+                    "exponents": [
+                        "4.501800",
+                        "0.681444",
+                        "0.151398"
+                    ],
+                    "coefficients": [
+                        [
+                            "0.070452",
+                            "0.407826",
+                            "0.647752"
+                        ]
+                    ]
+                }
+            ],
+            "references": [
+                {
+                    "reference_description": "MB Minimal Basis: 1 Function/AO",
+                    "reference_keys": [
+                        "duijneveldt1971a"
+                    ]
+                }
+            ]
+        }
+    },
+    "version": "0",
+    "function_types": [
+        "gto"
+    ],
+    "names": [
+        "MINI"
+    ],
+    "tags": [],
+    "family": "huzinaga",
+    "description": "Huzinaga MINI",
+    "role": "orbital",
+    "auxiliaries": {},
+    "name": "MINI"
+}
+
+
