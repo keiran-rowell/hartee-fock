@@ -196,13 +196,13 @@ fn get_basis_set(name: &str) -> BasisSetData {
       let mut exponents = Vec::new();
       let mut coefficients = Vec::new();
 
-      // Iterate and flatten all shells (handles split-valence and polarization functions safely)
-      for shell in &element_data.electron_shells {
-          for exp_str in &shell.exponents {
+      // Need to only grab the primary shell for this dummy implementation rather than flatten all the shells in more complicated basis sets 
+      if let Some(primary_shell) = element_data.electron_shells.first() {
+          for exp_str in &primary_shell.exponents {
               exponents.push(exp_str.parse::<f64>().unwrap());
        }
-       // Grab the first coefficient array inside the shell matrix
-       for coef_str in &shell.coefficients[0] {
+       // Grab the primary coefficient array inside the baseline shell 
+       for coef_str in &primary_shell.coefficients[0] {
            coefficients.push(coef_str.parse::<f64>().unwrap());
         }
     }
