@@ -179,11 +179,11 @@ fn get_basis_set(name: &str) -> BasisSetData {
     let raw_json = match name {
         "STO-2G" => include_str!("../basis_sets/sto-2g-H.json"),
         "STO-3G" => include_str!("../basis_sets/sto-3g-H.json"),
+        "STO-4G" => include_str!("../basis_sets/sto-4g-H.json"),
+        "STO-5G" => include_str!("../basis_sets/sto-5g-H.json"),
+        "STO-6G" => include_str!("../basis_sets/sto-6g-H.json"),
         "3-21G"  => include_str!("../basis_sets/3-21g-H.json"),
-        "6-31G"  => include_str!("../basis_sets/6-31g-H.json"),
-        "cc-pVDZ" => include_str!("../basis_sets/cc-pvDZ-H.json"),
-        "cc-pVTZ" => include_str!("../basis_sets/cc-pvTZ-H.json"),
-        "cc-pVQZ" => include_str!("../basis_sets/cc-pvQZ-H.json"),
+        "MINI" => include_str!("../basis_sets/MINI-H.json"),
         _ => include_str!("../basis_sets/sto-2g-H.json"),
       };
 
@@ -207,10 +207,22 @@ fn get_basis_set(name: &str) -> BasisSetData {
         }
     }
 
+   let zeta_squared = match name {
+        "MINI"   => 1.25 * 1.25, // Huzinaga molecular scaling
+        "3-21G"  => 1.15 * 1.15, // Pople inner-valence split scaling
+        _ if name.starts_with("STO") => 1.24 * 1.24, // Pople minimal scaling
+        _        => 1.0, // Baseline fallback
+    };
+
+    let scaled_exponents: Vec<f64> = exponents
+        .iter()
+        .map(|alpha| alpha * zeta_squared)
+        .collect();
+
    BasisSetData {
      name: parsed.names.first().cloned().unwrap_or_else(|| name.to_string()),
      description: parsed.description,
-     exponents,
+     exponents: scaled_exponents,
      coefficients,
    }
 }

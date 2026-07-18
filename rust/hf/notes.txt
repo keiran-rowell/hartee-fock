@@ -1,1 +1,5 @@
-Need to move all the core function of th SCF solver into lib.rs, so that main.rs just calls it (and builds a local binary). Then #[wasm_bindgen] is very similar to main.rs in that it calls the SCF solver
+BROKEN: Best to implement a full shell resolver from the BSSE .json types. Demonstrate Rust's superior speed (an cumbersome development)
+
+This is currently a minimal basis set 2x2 solver. So only STO- type bases will work.
+
+Leaving here as even LLM-assisted Rust development speed on scientific software is slow
