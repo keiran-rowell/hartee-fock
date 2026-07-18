@@ -1,0 +1,11 @@
+/home/keiran/code/hartee-fock/rust/hf/target/release/deps/num_complex-a060d49cd7b53bbb.d: /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/lib.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/cast.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/pow.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/complex_float.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/crand.rs
+
+/home/keiran/code/hartee-fock/rust/hf/target/release/deps/libnum_complex-a060d49cd7b53bbb.rlib: /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/lib.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/cast.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/pow.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/complex_float.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/crand.rs
+
+/home/keiran/code/hartee-fock/rust/hf/target/release/deps/libnum_complex-a060d49cd7b53bbb.rmeta: /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/lib.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/cast.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/pow.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/complex_float.rs /home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/crand.rs
+
+/home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/lib.rs:
+/home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/cast.rs:
+/home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/pow.rs:
+/home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/complex_float.rs:
+/home/keiran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/crand.rs:

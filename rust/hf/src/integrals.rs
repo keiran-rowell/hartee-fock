@@ -1,8 +1,87 @@
 use std::f64::consts::PI;
+use std::fs;
 use ndarray::Array2;
 use ndarray::Array4;
+use serde::{Serialize, Deserialize};
+use log::debug;
 
-use crate::BasisSetData;
+/// Basis set data structure
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BasisSetData {
+    pub name: String,
+    pub description: String,
+    pub exponents: Vec<f64>,
+    pub coefficients: Vec<f64>,
+}
+
+impl BasisSetData {
+    /// Normalize the basis function so that self-overlap integral equals 1.0
+    pub fn normalise(&mut self) {
+        let mut total_self_overlap = 0.0;
+        let origin = [0.0, 0.0, 0.0];
+
+        // Calculate the current self-overlap of the contracted function
+        for (&alpha, &c_i) in self.exponents.iter().zip(self.coefficients.iter()) {
+            for (&beta, &c_j) in self.exponents.iter().zip(self.coefficients.iter()) {
+                let s_prim = compute_s_primitive(alpha, beta, &origin, &origin);
+                total_self_overlap += c_i * c_j * s_prim;
+            }
+        }
+
+        // The factor needed to make total_self_overlap == 1.0
+        let norm_factor = 1.0 / total_self_overlap.sqrt();
+
+        // Scale all coefficients by this factor
+        for c in self.coefficients.iter_mut() {
+            *c *= norm_factor;
+        }
+    }
+}
+
+pub fn load_basis_sets(basis_sets_dir: &str) -> Vec<BasisSetData> {
+    let mut basis_sets = Vec::new();
+
+    for entry in fs::read_dir(basis_sets_dir).expect("Failed to read basis set directory") {
+        let entry = entry.expect("Failed to read directory entry");
+
+        if entry.path().extension().and_then(|s| s.to_str()) == Some("json") {
+            let path = entry.path();
+            let json = fs::read_to_string(&path).expect("Basis set unavailable or unreadable");
+
+            let value: serde_json::Value = serde_json::from_str(&json).expect("Failed to parse basis set JSON");
+
+            let name = value["name"].as_str().unwrap_or("Unknown").to_string();
+            let description = value["description"].as_str().unwrap_or("No description").to_string();
+
+            // Extract electron shell data for Hydrogen (atomic number 1) as an example
+            let shell = &value["elements"]["1"]["electron_shells"][0];
+
+            let exponents: Vec<f64> = shell["exponents"]
+                .as_array()
+                .expect("Exponents should be an array")
+                .iter()
+                .map(|v| v.as_str().expect("Originally a string").parse::<f64>().expect("String shoulld parse to f64"))
+                .collect();
+
+            let coefficients: Vec<f64> = shell["coefficients"][0]
+                .as_array()
+                .expect("Coefficients should be an array")
+                .iter()
+                .map(|v| v.as_str().expect("Originally a string").parse::<f64>().expect("String shoulld parse to f64"))
+                .collect();
+
+            debug!("Loaded basis set: {} ", description);
+
+            basis_sets.push(BasisSetData {
+                name,
+                description,
+                exponents,
+                coefficients,
+            });
+        }
+    }
+    basis_sets
+}
 
 #[inline]
 pub fn dist_sq(r1: &[f64; 3], r2: &[f64; 3]) -> f64 {
