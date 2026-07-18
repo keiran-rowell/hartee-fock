@@ -1,7 +1,6 @@
 use ndarray::Array2;
 use wasm_bindgen::prelude::*;
 use serde::{Serialize, Deserialize};
-use ndarray_linalg::Eig;
 
 pub mod integrals;
 use integrals::{
@@ -110,31 +109,33 @@ fn calculate_scf(bond_dist: f64, basis_name: &str) -> HFResult {
         let g_matrix = build_g_matrix(&eri_tensor, &d_matrix);
         let f_matrix = &t_matrix + &v_matrix + &g_matrix;
         
-        // Orthogonalization: X = U * S^(-1/2) * U^T
-        let (s_eigvals, s_eigvecs) = s_matrix.eig().expect("Eigendecomposition of S failed");
+        // Use nalgebra for eigendecomposition (works on WASM + native)
+        use nalgebra as na;
         
-        // Clean up eigenvalues to avoid numerical issues
-        let s_inv_sqrt_diag = ndarray::Array2::from_diag(
-            &s_eigvals.map(|v| {
-                let val = v.re.max(1e-15);
-                val.powf(-0.5)
-            }),
+        let s_na = na::Matrix2::<f64>::from_row_slice(&s_matrix.to_vec());
+        let eig_s = s_na.symmetric_eigen();
+        
+        // Create S^(-1/2)
+        let s_inv_sqrt_diag = na::Matrix2::from_diagonal(
+            &eig_s.eigenvalues.map(|v| v.max(1e-15).powf(-0.5))
         );
         
-        let u = s_eigvecs.map(|v| v.re);
-        let x = u.dot(&s_inv_sqrt_diag).dot(&u.t());
+        let x = &eig_s.eigenvectors * &s_inv_sqrt_diag * eig_s.eigenvectors.transpose();
         
-        // Transform Fock matrix to orthonormal basis
-        let f_prime = x.t().dot(&f_matrix).dot(&x);
+        // Transform Fock matrix
+        let f_prime = x.transpose() * na::Matrix2::<f64>::from_row_slice(&f_matrix.to_vec()) * x;
+        let eig_f = f_prime.symmetric_eigen();
         
-        // Diagonalize transformed Fock matrix
-        let (epsilon_complex, c_prime_complex) = f_prime.eig().expect("Fock diagonalization failed");
-        let epsilon = epsilon_complex.map(|v| v.re);
-        let c_prime = c_prime_complex.map(|v| v.re);
+        let epsilon = eig_f.eigenvalues;
+        let c_prime = eig_f.eigenvectors;
+        let c = x * c_prime;
         
-        // Back-transform coefficients to original basis
-        let c = x.dot(&c_prime);
-        
+        // Convert back to ndarray
+        let c = Array2::from_shape_vec(
+            (2, 2),
+            c.as_slice().to_vec()
+        ).unwrap();        
+ 
         // Build density matrix from occupied orbitals
         let num_electrons = 2; // H2 has 2 electrons
         if num_electrons % 2 != 0 {
