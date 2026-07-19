@@ -220,6 +220,7 @@ fn get_basis_set(name: &str) -> Vec<BasisSetData> {
       let parsed: BseJson = serde_json::from_str(raw_json)
         .unwrap_or_else(|_| panic!("Failed to parse embedded JSON for {}", name));
 
+      println!("DEBUG: Basis set family read from JSON -> {:?}", parsed.family);
       let is_dunning = parsed.family.trim() == "dunning";
       
       // Only apply the Pople molecular orbital scaling to raw minimal fits.
@@ -232,50 +233,61 @@ fn get_basis_set(name: &str) -> Vec<BasisSetData> {
       
       let mut shells = Vec::new();
       let element_data = parsed.elements.get("1").expect("Missing Hydrogen (element 1) in the basis set json");
-      
+
       for shell_data in &element_data.electron_shells {
-        if shell_data.angular_momentum != vec![0] {
+         // Skip functions with angular momentum (> s)
+         if shell_data.angular_momentum != vec![0] {
             continue;
         }
    
-        let raw_exponents: Vec<f64> = shell_data.exponents
+         let mut exponents = Vec::new();
+         for exp_str in &shell_data.exponents {
+            exponents.push(exp_str.parse::<f64>().unwrap());
+         }
+
+         let scaled_exponents: Vec<f64> = exponents
             .iter()
-            .map(|exp_str| exp_str.parse::<f64>().unwrap())
+            .map(|alpha| alpha * zeta_squared)
             .collect();
 
-        // If it's Dunning, take all rows. Otherwise, just take the first row.
-        let limit = if is_dunning { shell_data.coefficients.len() } else { 1 };
-
-        for coef_row in shell_data.coefficients.iter().take(limit) {
-            let coefficients: Vec<f64> = coef_row
-                .iter()
-                .map(|coef_str| coef_str.parse::<f64>().unwrap())
-                .collect();
-
-            // 1. Scale exponents first to establish the final molecular coordinate field
-            let mut scaled_exponents = raw_exponents.clone();
-            if zeta_squared != 1.0 {
-                for alpha in &mut scaled_exponents {
-                    *alpha *= zeta_squared;
+         if is_dunning {
+            // General Contraction: extract every coefficient row as a distinct basis function
+            for coef_row in &shell_data.coefficients {
+                let mut coefficients = Vec::new();
+                for coef_str in coef_row {
+                    coefficients.push(coef_str.parse::<f64>().unwrap());
                 }
+
+                shells.push(BasisSetData {
+                    name: name.to_string(),
+                    description: parsed.description.clone(),
+                    exponents: scaled_exponents.clone(),
+                    coefficients,
+                });
+                // Ensure the general contraction shell is properly normalized
+                shells.last_mut().unwrap().normalise();
             }
+        } else {
+            // Segmented Contraction: grab only the single principal coefficient row for this shell entry
+            if let Some(first_row) = shell_data.coefficients.first() {
+                let mut coefficients = Vec::new();
+                for coef_str in first_row {
+                    coefficients.push(coef_str.parse::<f64>().unwrap());
+                }
 
-            // 2. Build the function tracking the scaled exponents directly
-            let mut basis_fn = BasisSetData {
-                name: name.to_string(),
-                description: parsed.description.clone(),
-                exponents: scaled_exponents,
-                coefficients,
-            };
-              
-            // 3. Normalize the contraction coefficients inside the final scaled framework
-            basis_fn.normalise();
-
-            shells.push(basis_fn);
+                shells.push(BasisSetData {
+                    name: name.to_string(),
+                    description: parsed.description.clone(),
+                    exponents: scaled_exponents.clone(),
+                    coefficients,
+                });
+                // Ensure the general contraction shell is properly normalized
+                shells.last_mut().unwrap().normalise();
+            }
         }
     }
 
-    shells
+   shells
 }
 
 // Expose integrals module for library use
