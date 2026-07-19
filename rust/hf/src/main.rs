@@ -9,7 +9,7 @@ fn main() {
     let bond_dist = dist_sq(&r_a, &r_b).sqrt();
     debug!("Inter-nuclear distance: {}", bond_dist);
 
-    let basis_name = "STO-3G";
+    let basis_name = "cc-pVDZ";
     println!("\n=== Running Hartree-Fock for H2 with {} basis set ===\n", basis_name);
     let result = calculate_scf(bond_dist, basis_name);    
 

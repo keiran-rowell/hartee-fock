@@ -219,67 +219,61 @@ pub fn build_eri_tensor_symmetric(
     let n = basis_functions.len();
     let mut eri = Array4::<f64>::zeros((n, n, n, n));
       
-    // Midpoint mapping for H2 split-valence functions
     let half = n / 2;
     let r_a = &r_coords[0];
     let r_b = &r_coords[1];
 
     for i in 0..n {
-        for j in 0..=i { // i >= j
-            let ij = i * (i + 1) / 2 + j;
-            for k in 0..n {
-                for l in 0..=k { // k >= l
-                    let kl = k * (k + 1) / 2 + l;
+        for j in 0..=i { // Enforce i >= j
+            for k in 0..=i { // Enforce k <= i to only loop unique pairs of pairs
+                // If k == i, l can only loop up to j to prevent duplicate pairs
+                let l_max = if k == i { j } else { k };
+                for l in 0..=l_max {
                     
-                    if ij >= kl {
-                        let mut val = 0.0;
+                    let mut val = 0.0;
 
-                        // Dynamic coordinate mapping based on basis function index
-                        let pos_i = if i < half { r_a } else { r_b };
-                        let pos_j = if j < half { r_a } else { r_b };
-                        let pos_k = if k < half { r_a } else { r_b };
-                        let pos_l = if l < half { r_a } else { r_b };
-                     
-                        // Contract primitives
-                        for (p_i, &alpha) in basis_functions[i].exponents.iter().enumerate() {
-                            for (p_j, &beta) in basis_functions[j].exponents.iter().enumerate() {
-                                for (p_k, &gamma) in basis_functions[k].exponents.iter().enumerate() {
-                                    for (p_l, &delta) in basis_functions[l].exponents.iter().enumerate() {
-                                        
-                                        let res = compute_eri_primitive(
-                                            alpha, beta, gamma, delta,
-                                            pos_i, pos_j, pos_k, pos_l 
-                                        );
+                    let pos_i = if i < half { r_a } else { r_b };
+                    let pos_j = if j < half { r_a } else { r_b };
+                    let pos_k = if k < half { r_a } else { r_b };
+                    let pos_l = if l < half { r_a } else { r_b };
+                 
+                    for (p_i, &alpha) in basis_functions[i].exponents.iter().enumerate() {
+                        for (p_j, &beta) in basis_functions[j].exponents.iter().enumerate() {
+                            for (p_k, &gamma) in basis_functions[k].exponents.iter().enumerate() {
+                                for (p_l, &delta) in basis_functions[l].exponents.iter().enumerate() {
+                                    
+                                    let res = compute_eri_primitive(
+                                        alpha, beta, gamma, delta,
+                                        pos_i, pos_j, pos_k, pos_l 
+                                    );
 
-                                        // Normalisation for each primitive
-                                        let n_i = (2.0 * alpha / PI).powf(0.75);
-                                        let n_j = (2.0 * beta / PI).powf(0.75);
-                                        let n_k = (2.0 * gamma / PI).powf(0.75);
-                                        let n_l = (2.0 * delta / PI).powf(0.75);
-                                        let norm_factor = n_i * n_j * n_k * n_l;
+                                    let n_i = (2.0 * alpha / PI).powf(0.75);
+                                    let n_j = (2.0 * beta / PI).powf(0.75);
+                                    let n_k = (2.0 * gamma / PI).powf(0.75);
+                                    let n_l = (2.0 * delta / PI).powf(0.75);
+                                    let norm_factor = n_i * n_j * n_k * n_l;
 
-                                        let norm_coeffs = 
-                                            basis_functions[i].coefficients[p_i] *
-                                            basis_functions[j].coefficients[p_j] *
-                                            basis_functions[k].coefficients[p_k] *
-                                            basis_functions[l].coefficients[p_l];
+                                    let norm_coeffs = 
+                                        basis_functions[i].coefficients[p_i] *
+                                        basis_functions[j].coefficients[p_j] *
+                                        basis_functions[k].coefficients[p_k] *
+                                        basis_functions[l].coefficients[p_l];
 
-                                        val += norm_coeffs * res * norm_factor;
-                                    }
+                                    val += norm_coeffs * res * norm_factor;
                                 }
                             }
                         }
-
-                        // Apply the value to all 8 symmetric positions
-                        eri[[i, j, k, l]] = val;
-                        eri[[j, i, k, l]] = val;
-                        eri[[i, j, l, k]] = val;
-                        eri[[j, i, l, k]] = val;
-                        eri[[k, l, i, j]] = val;
-                        eri[[l, k, i, j]] = val;
-                        eri[[k, l, j, i]] = val;
-                        eri[[l, k, j, i]] = val;
                     }
+
+                    // Map the unique value out to all 8 permuted coordinates symmetrically
+                    eri[[i, j, k, l]] = val;
+                    eri[[j, i, k, l]] = val;
+                    eri[[i, j, l, k]] = val;
+                    eri[[j, i, l, k]] = val;
+                    eri[[k, l, i, j]] = val;
+                    eri[[l, k, i, j]] = val;
+                    eri[[k, l, j, i]] = val;
+                    eri[[l, k, j, i]] = val;
                 }
             }
         }

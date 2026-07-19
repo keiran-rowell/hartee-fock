@@ -203,14 +203,15 @@ pub fn calculate_scf(bond_dist: f64, basis_name: &str) -> HFResult {
 /// Embedded basis sets for WASM with strings generated a compile time (no file I/O)
 fn get_basis_set(name: &str) -> Vec<BasisSetData> {
     let raw_json = match name {
-        "STO-2G" => include_str!("../basis_sets/sto-2g-H.json"),
-        "STO-3G" => include_str!("../basis_sets/sto-3g-H.json"),
-        "STO-4G" => include_str!("../basis_sets/sto-4g-H.json"),
-        "STO-5G" => include_str!("../basis_sets/sto-5g-H.json"),
-        "STO-6G" => include_str!("../basis_sets/sto-6g-H.json"),
+     // "STO-2G" => include_str!("../basis_sets/sto-2g-H.json"),
+     // "STO-3G" => include_str!("../basis_sets/sto-3g-H.json"),
+     // "STO-4G" => include_str!("../basis_sets/sto-4g-H.json"),
+     // "STO-5G" => include_str!("../basis_sets/sto-5g-H.json"),
+     // "STO-6G" => include_str!("../basis_sets/sto-6g-H.json"),
         "MINI"   => include_str!("../basis_sets/MINI-H.json"),
         "3-21G"  => include_str!("../basis_sets/3-21g-H.json"),
         "6-31G"  => include_str!("../basis_sets/6-31g-H.json"),
+        "6-311G" => include_str!("../basis_sets/6-311g-H.json"),
         "cc-pVDZ"  => include_str!("../basis_sets/cc-pvDZ-H.json"),
         "cc-pVTZ"  => include_str!("../basis_sets/cc-pvTZ-H.json"),
         "cc-pVQZ"  => include_str!("../basis_sets/cc-pvQZ-H.json"),
